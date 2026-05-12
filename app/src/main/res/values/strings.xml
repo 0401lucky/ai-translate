@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">AI 翻译</string>
+    <string name="action_translate_text">AI 翻译</string>
+</resources>
