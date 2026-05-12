@@ -9,6 +9,7 @@ import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
+import java.security.MessageDigest
 
 class HyMtModelManager(
     context: Context,
@@ -40,38 +41,50 @@ class HyMtModelManager(
         _state.value = readState().copy(isDownloading = true, errorMessage = null)
 
         try {
-            val request = Request.Builder().url(MODEL_URL).build()
-            client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) {
-                    error("模型下载失败：HTTP ${response.code}")
-                }
-                val body = response.body ?: error("模型下载失败：响应为空")
-                val total = body.contentLength().takeIf { it > 0L } ?: EXPECTED_MODEL_BYTES
-                tempFile.outputStream().use { output ->
-                    body.byteStream().use { input ->
-                        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
-                        var downloaded = 0L
-                        while (true) {
-                            val read = input.read(buffer)
-                            if (read == -1) break
-                            output.write(buffer, 0, read)
-                            downloaded += read
-                            _state.value = ModelState(
-                                isAvailable = false,
-                                isDownloading = true,
-                                progress = (downloaded.toFloat() / total.toFloat()).coerceIn(0f, 1f),
-                                downloadedBytes = downloaded,
-                                totalBytes = total,
-                                filePath = modelFile.absolutePath,
-                            )
+            tempFile.outputStream().use { output ->
+                val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                var downloaded = 0L
+
+                // R2 Wrangler 单文件上传限制为 300MiB，模型按分片分发，下载后重新拼接为 GGUF。
+                MODEL_PARTS.forEachIndexed { index, part ->
+                    val request = Request.Builder().url(part.url).build()
+                    client.newCall(request).execute().use { response ->
+                        if (!response.isSuccessful) {
+                            error("模型分片下载失败：part${index.toString().padStart(2, '0')} HTTP ${response.code}")
+                        }
+                        val body = response.body ?: error("模型分片下载失败：响应为空")
+                        var partDownloaded = 0L
+                        body.byteStream().use { input ->
+                            while (true) {
+                                val read = input.read(buffer)
+                                if (read == -1) break
+                                output.write(buffer, 0, read)
+                                partDownloaded += read
+                                downloaded += read
+                                _state.value = ModelState(
+                                    isAvailable = false,
+                                    isDownloading = true,
+                                    progress = (downloaded.toFloat() / EXPECTED_MODEL_BYTES.toFloat()).coerceIn(0f, 1f),
+                                    downloadedBytes = downloaded,
+                                    totalBytes = EXPECTED_MODEL_BYTES,
+                                    filePath = modelFile.absolutePath,
+                                )
+                            }
+                        }
+                        if (partDownloaded != part.sizeBytes) {
+                            error("模型分片大小校验失败：part${index.toString().padStart(2, '0')}")
                         }
                     }
                 }
             }
 
-            if (tempFile.length() < MIN_VALID_MODEL_BYTES) {
+            if (tempFile.length() != EXPECTED_MODEL_BYTES) {
                 tempFile.delete()
-                error("模型文件过小，校验未通过")
+                error("模型文件大小校验失败")
+            }
+            if (!tempFile.sha256().equals(EXPECTED_MODEL_SHA256, ignoreCase = true)) {
+                tempFile.delete()
+                error("模型文件 SHA256 校验失败")
             }
             if (modelFile.exists()) modelFile.delete()
             tempFile.renameTo(modelFile)
@@ -101,9 +114,37 @@ class HyMtModelManager(
 
     companion object {
         const val MODEL_FILE_NAME = "HY-MT1.5-1.8B-Q4_K_M.gguf"
-        const val MODEL_URL =
-            "https://huggingface.co/tencent/HY-MT1.5-1.8B-GGUF/resolve/main/HY-MT1.5-1.8B-Q4_K_M.gguf?download=true"
+        private const val MODEL_BASE_URL = "https://pub-e16b86eab02f4594aaa4fd358cf6151e.r2.dev"
         const val EXPECTED_MODEL_BYTES = 1_133_080_512L
         const val MIN_VALID_MODEL_BYTES = 1_000L * 1024L * 1024L
+        const val EXPECTED_MODEL_SHA256 =
+            "4383AC0C3C8E476DE98FF979C2A3F069F8C4FB385E7860CF2D28DA896CC477C7"
+
+        private val MODEL_PARTS = listOf(
+            ModelPart("$MODEL_BASE_URL/models/parts/$MODEL_FILE_NAME.part00", 209_715_200L),
+            ModelPart("$MODEL_BASE_URL/models/parts/$MODEL_FILE_NAME.part01", 209_715_200L),
+            ModelPart("$MODEL_BASE_URL/models/parts/$MODEL_FILE_NAME.part02", 209_715_200L),
+            ModelPart("$MODEL_BASE_URL/models/parts/$MODEL_FILE_NAME.part03", 209_715_200L),
+            ModelPart("$MODEL_BASE_URL/models/parts/$MODEL_FILE_NAME.part04", 209_715_200L),
+            ModelPart("$MODEL_BASE_URL/models/parts/$MODEL_FILE_NAME.part05", 84_504_512L),
+        )
     }
+}
+
+private data class ModelPart(
+    val url: String,
+    val sizeBytes: Long,
+)
+
+private fun File.sha256(): String {
+    val digest = MessageDigest.getInstance("SHA-256")
+    inputStream().use { input ->
+        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+        while (true) {
+            val read = input.read(buffer)
+            if (read == -1) break
+            digest.update(buffer, 0, read)
+        }
+    }
+    return digest.digest().joinToString("") { "%02X".format(it) }
 }

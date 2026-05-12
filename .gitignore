@@ -1,5 +1,6 @@
 .gradle/
 .kotlin/
+.wrangler/
 build/
 app/build/
 app/schemas/

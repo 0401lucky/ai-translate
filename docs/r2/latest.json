@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-05-12T22:53:43+08:00",
+  "android": {
+    "versionCode": 1,
+    "versionName": "1.0.0",
+    "required": false,
+    "apkUrl": "",
+    "sha256": "",
+    "sizeBytes": 0,
+    "notes": [
+      "R2 update manifest placeholder. Upload a signed release APK before enabling in-app update checks."
+    ]
+  }
+}

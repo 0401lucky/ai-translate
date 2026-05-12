@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-05-12T22:53:43+08:00",
+  "models": [
+    {
+      "id": "hy-mt-1.5-1.8b-q4-k-m",
+      "displayName": "HY-MT 1.5 1.8B Q4_K_M",
+      "fileName": "HY-MT1.5-1.8B-Q4_K_M.gguf",
+      "format": "GGUF",
+      "quantization": "Q4_K_M",
+      "sizeBytes": 1133080512,
+      "sha256": "4383AC0C3C8E476DE98FF979C2A3F069F8C4FB385E7860CF2D28DA896CC477C7",
+      "downloadMode": "parts",
+      "sha256Url": "https://pub-e16b86eab02f4594aaa4fd358cf6151e.r2.dev/models/HY-MT1.5-1.8B-Q4_K_M.gguf.sha256",
+      "parts": [
+        {
+          "index": 0,
+          "fileName": "HY-MT1.5-1.8B-Q4_K_M.gguf.part00",
+          "sizeBytes": 209715200,
+          "sha256": "F8269EAD4EAA6D98695B287F504D0807853925051682FB6A7A30C06F3F9A0029",
+          "url": "https://pub-e16b86eab02f4594aaa4fd358cf6151e.r2.dev/models/parts/HY-MT1.5-1.8B-Q4_K_M.gguf.part00"
+        },
+        {
+          "index": 1,
+          "fileName": "HY-MT1.5-1.8B-Q4_K_M.gguf.part01",
+          "sizeBytes": 209715200,
+          "sha256": "C8E2C9B6B07B31FEC0D97F2829E0A47E1E6EB89F6216A62363ACB657F977DDBE",
+          "url": "https://pub-e16b86eab02f4594aaa4fd358cf6151e.r2.dev/models/parts/HY-MT1.5-1.8B-Q4_K_M.gguf.part01"
+        },
+        {
+          "index": 2,
+          "fileName": "HY-MT1.5-1.8B-Q4_K_M.gguf.part02",
+          "sizeBytes": 209715200,
+          "sha256": "729BAE2EC049F4AF9A27E141392F27347CA3BC0EF9BCEDB7D785428751BF05D7",
+          "url": "https://pub-e16b86eab02f4594aaa4fd358cf6151e.r2.dev/models/parts/HY-MT1.5-1.8B-Q4_K_M.gguf.part02"
+        },
+        {
+          "index": 3,
+          "fileName": "HY-MT1.5-1.8B-Q4_K_M.gguf.part03",
+          "sizeBytes": 209715200,
+          "sha256": "A64291925D47F1ECC6EE64B3C04FC813C00DC6122695100D62C5707E518DDEA9",
+          "url": "https://pub-e16b86eab02f4594aaa4fd358cf6151e.r2.dev/models/parts/HY-MT1.5-1.8B-Q4_K_M.gguf.part03"
+        },
+        {
+          "index": 4,
+          "fileName": "HY-MT1.5-1.8B-Q4_K_M.gguf.part04",
+          "sizeBytes": 209715200,
+          "sha256": "54209EE9FBA4F9C9F1B446D7B0417CC1B8E36EC9787BDD5CF6FACB0D0F0D0F3A",
+          "url": "https://pub-e16b86eab02f4594aaa4fd358cf6151e.r2.dev/models/parts/HY-MT1.5-1.8B-Q4_K_M.gguf.part04"
+        },
+        {
+          "index": 5,
+          "fileName": "HY-MT1.5-1.8B-Q4_K_M.gguf.part05",
+          "sizeBytes": 84504512,
+          "sha256": "0E48783DD576E955552118445AB71A0D52908548ADED326E0E239C1E40816095",
+          "url": "https://pub-e16b86eab02f4594aaa4fd358cf6151e.r2.dev/models/parts/HY-MT1.5-1.8B-Q4_K_M.gguf.part05"
+        }
+      ]
+    }
+  ]
+}

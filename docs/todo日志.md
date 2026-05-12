@@ -223,3 +223,22 @@
 - [x] 检索 README 关键章节，确认内容已写入。
 - [x] 回写验证结果到 Task 文档。
 - [x] 本次仅修改文档，未运行 Android 构建。
+
+## 2026-05-12：Cloudflare R2 模型与更新包分发
+
+- [x] 明确完成标准：创建 R2 bucket、上传模型与 manifest、开启公开访问、切换 App 模型下载地址并测试。
+- [x] 确认本机 Wrangler 可用：`4.90.0`。
+- [x] 确认当前 Cloudflare OAuth 登录账号可用，并通过本地代理访问 API。
+- [x] 确认本地 Q4_K_M 模型文件存在，大小 `1133080512` 字节。
+- [x] 更新 `docs/task文档.md`，新增 Task 018。
+- [x] 创建 R2 bucket：`ai-translate-assets`。
+- [x] 开启 R2 dev 临时公开访问：`https://pub-e16b86eab02f4594aaa4fd358cf6151e.r2.dev`。
+- [x] 生成并上传模型 SHA256 与 `models.json`。
+- [x] 上传 Q4_K_M GGUF 模型分片到 `models/parts/`。
+- [x] 上传 `releases/latest.json` 占位 manifest。
+- [x] 校验公开 URL：manifest 返回 200，分片 HEAD 返回 200，Range 请求返回 206。
+- [x] 切换 App 模型下载地址为 R2 分片下载。
+- [x] Kotlin 编译通过：`.\gradlew.bat :app:compileDebugKotlin --no-daemon --console=plain`。
+- [x] 单元测试结果 XML 通过：18 个测试均为 0 failure / 0 error；命令本身超过 60 秒上限后被停止。
+- [x] 回写验证结果到 Task 文档。
+- [ ] 选择并绑定正式自定义域名，替换临时 R2 dev URL。

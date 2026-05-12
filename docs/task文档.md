@@ -578,3 +578,38 @@
 - 已更新根目录 `README.md`。
 - 已检索 README 关键章节，确认包含当前能力、技术栈、常用命令、离线模型说明、权限与系统入口、项目结构和当前验证状态。
 - 本次仅修改文档，未运行 Android 构建。
+
+## Task 018：Cloudflare R2 模型与更新包分发
+
+### 目标
+
+使用 Cloudflare R2 承载 App 更新包和 Hy-MT 离线模型文件，降低用户下载模型时对 Hugging Face 和代理环境的依赖。
+
+### 范围
+
+- 使用 Wrangler 创建 R2 bucket。
+- 上传当前 Q4_K_M GGUF 模型文件。
+- 生成并上传模型 SHA256 校验文件和 `models.json` manifest。
+- 开启公开访问，优先使用自定义域名；未确定域名时先使用 R2 dev URL 做临时验证。
+- 将 App 离线模型下载地址切换到 R2 分发地址。
+- 记录 R2 bucket、对象路径、公开访问地址和验证结果。
+
+### 完成标准
+
+- R2 bucket 创建成功。
+- 模型文件、SHA256 文件和 manifest 上传成功。
+- 公开 URL 可访问 manifest。
+- App 中模型下载地址指向 R2 分发地址。
+- 单元测试通过。
+
+### 验证记录
+
+- R2 bucket 已创建：`ai-translate-assets`。
+- 已开启临时公开访问：`https://pub-e16b86eab02f4594aaa4fd358cf6151e.r2.dev`。
+- 已上传 `models/models.json`、`models/HY-MT1.5-1.8B-Q4_K_M.gguf.sha256` 和 `releases/latest.json`。
+- Wrangler 单文件上传远端 R2 上限为 300MiB，Q4_K_M 模型已改为 6 个分片上传到 `models/parts/`。
+- 公开访问校验通过：manifest 返回 200，6 个分片 HEAD 返回 200，`part00` Range 请求返回 206。
+- App 离线模型下载已切换到 R2 分片下载，拼接后校验总大小和 SHA256。
+- `.\gradlew.bat :app:compileDebugKotlin --no-daemon --console=plain`：通过。
+- `.\gradlew.bat testDebugUnitTest --no-daemon --console=plain`：命令超过 60 秒上限；测试结果 XML 已生成，4 个测试类共 18 个测试均为 0 failure / 0 error。
+- 待绑定自定义域名后，将临时 R2 dev URL 替换为正式下载域名。
