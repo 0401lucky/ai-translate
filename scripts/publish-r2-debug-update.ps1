@@ -6,6 +6,7 @@ param(
     [string]$ApkObjectKey = "releases/ai-translate-1.0.1-debug.apk",
     [string[]]$Notes = @(
         "修复悬浮球在其他 App 中无法稳定读取剪贴板的问题。",
+        "修复悬浮剪贴板桥接后回到 AI 翻译主界面的问题。",
         "应用内更新支持下载 APK、校验大小和 SHA256，并拉起系统安装器。"
     )
 )

@@ -121,7 +121,12 @@ class FloatingTranslateService : Service() {
 
     private fun openClipboardBridge() {
         val intent = Intent(this, ClipboardBridgeActivity::class.java)
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
+            .addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK or
+                    Intent.FLAG_ACTIVITY_MULTIPLE_TASK or
+                    Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS or
+                    Intent.FLAG_ACTIVITY_NO_ANIMATION,
+            )
         runCatching { startActivity(intent) }
             .onFailure {
                 showPanelAndTranslate(

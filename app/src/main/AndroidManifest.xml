@@ -42,6 +42,7 @@
             android:excludeFromRecents="true"
             android:exported="false"
             android:finishOnTaskLaunch="true"
+            android:taskAffinity="${applicationId}.clipboard"
             android:noHistory="true"
             android:theme="@style/Theme.AITranslate.Transparent" />
         <service

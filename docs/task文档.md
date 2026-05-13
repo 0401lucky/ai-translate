@@ -767,10 +767,49 @@
 - 已实现应用内更新包下载、大小校验、SHA256 校验、FileProvider 暴露 APK 和系统安装器拉起。
 - 已新增 `scripts/publish-r2-debug-update.ps1`，用于 Debug 包 R2 发版。
 - 已执行 R2 发版脚本，上传 `releases/ai-translate-1.0.1-debug.apk` 和 `releases/latest.json`。
-- R2 manifest GET 返回 200，APK HEAD 返回 200，APK 公开大小为 `142340788` 字节。
-- R2 manifest 已写入 SHA256：`A17F9D33136302292BF1A46FA008F853FAC010362B0B54C89CE94E2FDAE2C98E`。
+- R2 manifest GET 返回 200，APK HEAD 返回 200，APK 公开大小为 `142576561` 字节。
+- R2 manifest 已写入 SHA256：`33BF3BC2CEB546E1E5CB099A69295CE46F2C069BD0B01AD90EF1EEDB1E74B07D`。
 - `.\gradlew.bat :app:compileDebugKotlin --no-daemon --console=plain`：通过。
 - `.\gradlew.bat testDebugUnitTest --no-daemon --console=plain`：通过。
 - `.\gradlew.bat :app:assembleDebug --no-daemon --console=plain`：通过。
 - 本次 1.0.1 改动随提交同步到 GitHub `main`。
-- 已成功构建临时 `versionCode = 1` 测试客户端；安装验证时 `adb devices` 无在线设备，悬浮剪贴板和应用内安装真机点击验证待设备重新连接后补充。
+- 已成功构建临时 `versionCode = 1` 测试客户端；应用内安装真机验证待补充。
+- 真机覆盖安装 1.0.1 后，在 Chrome 页面点击悬浮球，已能读取剪贴板并显示中央悬浮翻译卡片。
+- 已重新上传包含桥接读取时机与任务栈修复的 1.0.1 Debug APK 到 R2。
+
+## Task 023：悬浮剪贴板桥接任务栈修复
+
+### 目标
+
+修复悬浮球点击后虽然能读取第三方 App 剪贴板，但桥接 Activity 结束后回到 AI 翻译主界面的问题，让用户停留在原第三方 App，仅显示悬浮翻译卡片。
+
+### 范围
+
+- 将 `ClipboardBridgeActivity` 隔离到独立透明任务栈，避免复用主界面任务栈。
+- 悬浮球启动桥接 Activity 时使用独立临时任务参数。
+- 桥接读取完成后移除临时任务，返回原第三方 App。
+- 保持读取失败提示和悬浮卡片翻译流程不变。
+
+### 不包含
+
+- 不修改翻译主界面视觉。
+- 不改变应用内更新协议和 R2 manifest 格式。
+
+### 完成标准
+
+- 从浏览器、微信等第三方 App 点击悬浮球后，不跳回 AI 翻译主界面。
+- 成功读取剪贴板时，原第三方 App 上方显示中央悬浮翻译卡片。
+- 读取失败时，原第三方 App 上方显示明确错误提示。
+- Kotlin 编译、单元测试和 Debug APK 构建通过。
+
+### 验证记录
+
+- 已将 `ClipboardBridgeActivity` 设置为独立透明任务栈：`${applicationId}.clipboard`。
+- 悬浮球启动桥接 Activity 时使用独立临时任务参数，避免复用 AI 翻译主界面任务栈。
+- 桥接读取完成后调用 `finishAndRemoveTask()`，移除临时任务。
+- 真机验证：在 Chrome 页面点击悬浮球后，底层仍停留在 Chrome，并显示中央悬浮翻译卡片；`dumpsys window` 显示 `mFocusedApp` 仍为 `com.android.chrome`。
+- `.\gradlew.bat :app:compileDebugKotlin --no-daemon --console=plain`：通过。
+- `.\gradlew.bat testDebugUnitTest --no-daemon --console=plain`：通过。
+- `.\gradlew.bat :app:assembleDebug --no-daemon --console=plain`：通过。
+- 已执行 `scripts/publish-r2-debug-update.ps1`，重新上传 `1.0.1` Debug APK 和 `releases/latest.json`。
+- R2 manifest GET 返回 200，APK HEAD 返回 200，APK 公开大小为 `142576561` 字节，SHA256 为 `33BF3BC2CEB546E1E5CB099A69295CE46F2C069BD0B01AD90EF1EEDB1E74B07D`。

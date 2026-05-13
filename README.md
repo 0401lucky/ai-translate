@@ -92,7 +92,7 @@ App 当前声明以下关键权限和入口：
 - `ACTION_PROCESS_TEXT`：接收系统划词文本。
 - `ACTION_SEND` + `text/plain`：接收其他 App 分享的文本。
 
-剪贴板能力只在 App 前台或用户点击悬浮球后读取，不做后台自动监听，也不会自动提交翻译。
+剪贴板能力只在 App 前台或用户点击悬浮球后读取，不做后台自动监听，也不会自动提交翻译。悬浮球读取剪贴板时会短暂拉起透明桥接任务，读取完成后回到原第三方 App，只在原页面上方显示中央悬浮翻译卡片。
 
 ## 项目结构
 
@@ -119,9 +119,9 @@ docs/
 
 - `testDebugUnitTest`：最近任务记录中通过。
 - `assembleDebug`：最近任务记录中通过。
-- R2 更新清单：`https://download.204152.xyz/releases/latest.json` 当前可访问；1.0.1 Debug 更新包由 `scripts/publish-r2-debug-update.ps1` 上传。
+- R2 更新清单：`https://download.204152.xyz/releases/latest.json` 当前可访问；1.0.1 Debug 更新包由 `scripts/publish-r2-debug-update.ps1` 上传，最新 SHA256 为 `33BF3BC2CEB546E1E5CB099A69295CE46F2C069BD0B01AD90EF1EEDB1E74B07D`。
 - Q4_K_M 离线翻译：已在真机验证，`hi` 可翻译为 `嗨`。
-- 系统划词/分享、剪贴板提示、悬浮球：代码与构建产物已就绪；部分真机交互项在最近日志中仍标记为待设备连接后补充。
+- 系统划词/分享、剪贴板提示、悬浮球：代码与构建产物已就绪；悬浮球已在 Chrome 真机验证，不会再跳回 AI 翻译主界面。
 
 ## 参考文档
 

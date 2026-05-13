@@ -5,13 +5,42 @@ import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.Intent
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.view.View
 import android.widget.Toast
 import com.mxwis.aitranslate.domain.ExternalTextInput
 
 class ClipboardBridgeActivity : Activity() {
+    private val handler = Handler(Looper.getMainLooper())
+    private var hasHandledClipboard = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        translateClipboardFromForeground()
+        window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+        scheduleClipboardRead()
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) {
+            scheduleClipboardRead()
+        }
+    }
+
+    override fun onDestroy() {
+        handler.removeCallbacksAndMessages(null)
+        super.onDestroy()
+    }
+
+    private fun scheduleClipboardRead() {
+        if (hasHandledClipboard) return
+        handler.postDelayed({
+            if (!hasHandledClipboard) {
+                hasHandledClipboard = true
+                translateClipboardFromForeground()
+            }
+        }, CLIPBOARD_READ_DELAY_MS)
     }
 
     private fun translateClipboardFromForeground() {
@@ -31,7 +60,7 @@ class ClipboardBridgeActivity : Activity() {
         if (text == null) {
             Toast.makeText(this, "未读取到剪贴板文本", Toast.LENGTH_SHORT).show()
         }
-        finish()
+        finishAndRemoveTask()
         overridePendingTransition(0, 0)
     }
 
@@ -46,5 +75,9 @@ class ClipboardBridgeActivity : Activity() {
             val clip = clipboard.primaryClip?.takeIf { it.itemCount > 0 } ?: return null
             ExternalTextInput.extractClipboardText(clip.getItemAt(0).coerceToText(this))
         }.getOrNull()
+    }
+
+    companion object {
+        private const val CLIPBOARD_READ_DELAY_MS = 180L
     }
 }
