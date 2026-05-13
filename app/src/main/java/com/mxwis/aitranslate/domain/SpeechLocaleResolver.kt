@@ -8,11 +8,25 @@ object SpeechLocaleResolver {
         text: String,
         defaultLocale: Locale = Locale.getDefault(),
     ): Locale {
-        if (language.code != Languages.auto.code) {
-            return resolveKnownLanguage(language.code) ?: defaultLocale
-        }
+        return resolveCandidates(language, text, defaultLocale).first()
+    }
 
-        return inferFromText(text) ?: defaultLocale
+    fun resolveCandidates(
+        language: LanguageOption,
+        text: String,
+        defaultLocale: Locale = Locale.getDefault(),
+    ): List<Locale> {
+        val preferred = if (language.code != Languages.auto.code) {
+            resolveKnownLanguage(language.code)
+        } else {
+            inferFromText(text)
+        }
+        return listOfNotNull(
+            preferred,
+            defaultLocale,
+            Locale.ENGLISH,
+            Locale.SIMPLIFIED_CHINESE,
+        ).distinctBy { it.toLanguageTag() }
     }
 
     private fun resolveKnownLanguage(code: String): Locale? {

@@ -1,13 +1,13 @@
 param(
-    [int]$VersionCode = 2,
-    [string]$VersionName = "1.0.1",
+    [int]$VersionCode = 3,
+    [string]$VersionName = "1.0.2",
     [string]$Bucket = "ai-translate-assets",
     [string]$PublicBaseUrl = "https://download.204152.xyz",
-    [string]$ApkObjectKey = "releases/ai-translate-1.0.1-debug.apk",
+    [string]$ApkObjectKey = "releases/ai-translate-1.0.2-debug.apk",
     [string[]]$Notes = @(
-        "修复悬浮球在其他 App 中无法稳定读取剪贴板的问题。",
-        "修复悬浮剪贴板桥接后回到 AI 翻译主界面的问题。",
-        "应用内更新支持下载 APK、校验大小和 SHA256，并拉起系统安装器。"
+        "修复系统文本朗读初始化失败后只提示不可用的问题。",
+        "新增文本朗读状态检测、重试、语音包安装和系统设置修复入口。",
+        "朗读语言支持候选回退，覆盖主界面、快速翻译、历史详情和悬浮翻译窗。"
     )
 )
 

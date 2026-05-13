@@ -52,4 +52,28 @@ class SpeechLocaleResolverTest {
             ),
         )
     }
+
+    @Test
+    fun `候选 Locale 会追加默认语言英文和简体中文`() {
+        assertEquals(
+            listOf(Locale.JAPANESE, Locale.GERMAN, Locale.ENGLISH, Locale.SIMPLIFIED_CHINESE),
+            SpeechLocaleResolver.resolveCandidates(
+                language = Languages.byCode("ja"),
+                text = "こんにちは",
+                defaultLocale = Locale.GERMAN,
+            ),
+        )
+    }
+
+    @Test
+    fun `候选 Locale 会去重`() {
+        assertEquals(
+            listOf(Locale.SIMPLIFIED_CHINESE, Locale.ENGLISH),
+            SpeechLocaleResolver.resolveCandidates(
+                language = Languages.auto,
+                text = "你好",
+                defaultLocale = Locale.SIMPLIFIED_CHINESE,
+            ),
+        )
+    }
 }

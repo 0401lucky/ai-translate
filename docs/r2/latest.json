@@ -1,17 +1,17 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-05-13T12:48:31+08:00",
+  "updatedAt": "2026-05-13T13:53:34+08:00",
   "android": {
-    "versionCode": 2,
-    "versionName": "1.0.1",
+    "versionCode": 3,
+    "versionName": "1.0.2",
     "required": false,
-    "apkUrl": "https://download.204152.xyz/releases/ai-translate-1.0.1-debug.apk",
-    "sha256": "33BF3BC2CEB546E1E5CB099A69295CE46F2C069BD0B01AD90EF1EEDB1E74B07D",
-    "sizeBytes": 142576561,
+    "apkUrl": "https://download.204152.xyz/releases/ai-translate-1.0.2-debug.apk",
+    "sha256": "C692F0798AAA54E0AD7D020D9C8F4F5611267CCDCBC788D03EC84295C88EDCF4",
+    "sizeBytes": 142357364,
     "notes": [
-      "修复悬浮球在其他 App 中无法稳定读取剪贴板的问题。",
-      "修复悬浮剪贴板桥接后回到 AI 翻译主界面的问题。",
-      "应用内更新支持下载 APK、校验大小和 SHA256，并拉起系统安装器。"
+      "修复系统文本朗读初始化失败后只提示不可用的问题。",
+      "新增文本朗读状态检测、重试、语音包安装和系统设置修复入口。",
+      "朗读语言支持候选回退，覆盖主界面、快速翻译、历史详情和悬浮翻译窗。"
     ]
   }
 }

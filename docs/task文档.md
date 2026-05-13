@@ -813,3 +813,49 @@
 - `.\gradlew.bat :app:assembleDebug --no-daemon --console=plain`：通过。
 - 已执行 `scripts/publish-r2-debug-update.ps1`，重新上传 `1.0.1` Debug APK 和 `releases/latest.json`。
 - R2 manifest GET 返回 200，APK HEAD 返回 200，APK 公开大小为 `142576561` 字节，SHA256 为 `33BF3BC2CEB546E1E5CB099A69295CE46F2C069BD0B01AD90EF1EEDB1E74B07D`。
+
+## Task 024：1.0.2 系统文本朗读修复
+
+### 目标
+
+修复当前点击朗读后只提示“系统朗读不可用”的问题，把系统 TTS 朗读完善为可检测、可重试、可修复、可回退语言的稳定功能，并作为 `1.0.2` 通过 Cloudflare R2 发布。
+
+### 范围
+
+- 新增共享系统朗读控制器，统一主翻译页、快速翻译卡片、历史详情和悬浮翻译窗的 TTS 行为。
+- 检测系统 TTS 引擎、初始化状态和语音包可用性。
+- 初始化失败或无语音包时提供明确提示和修复入口。
+- 扩展朗读语言候选回退：优先选择语言/文本推断，再回退设备默认语言、英文、简体中文。
+- 设置页新增“文本朗读”模块，显示状态并提供重新检测、安装语音包、打开系统设置和测试朗读。
+- 将版本提升为 `versionCode = 3`、`versionName = 1.0.2`，更新 R2 Debug 发版脚本与 manifest。
+
+### 不包含
+
+- 不接入云端 TTS。
+- 不做音色、语速、缓存和费用控制。
+- 不内置第三方语音引擎。
+
+### 完成标准
+
+- 点击任意朗读入口不会只停留在“系统朗读不可用”，而是显示可理解原因和修复入口。
+- 系统 TTS 可用时，主页面、快速卡片、历史详情和悬浮窗均可朗读。
+- 系统 TTS 不可用时，设置页能引导安装语音包或打开系统设置。
+- Kotlin 编译、单元测试和 Debug APK 构建通过。
+- R2 `releases/latest.json` 指向 `1.0.2` Debug APK。
+
+### 验证记录
+
+- UI 设计图已生成并保存到 `docs/ui/v102-tts-design.png`。
+- 已新增共享系统朗读控制器，统一主翻译页、快速翻译卡片、历史详情和悬浮翻译窗的 TTS 行为。
+- 已在设置页新增“文本朗读”模块，提供状态展示、重新检测、安装语音包、打开系统设置和测试朗读。
+- 已扩展 `SpeechLocaleResolver`，支持候选 Locale 回退。
+- 已在 Manifest 增加 TTS service、检查数据和安装数据的 package visibility 查询。
+- 已将版本号提升为 `versionCode = 3`、`versionName = 1.0.2`。
+- 已更新 `scripts/publish-r2-debug-update.ps1`，默认发布 `releases/ai-translate-1.0.2-debug.apk`。
+- `.\gradlew.bat :app:compileDebugKotlin --no-daemon --console=plain`：通过。
+- `.\gradlew.bat testDebugUnitTest --no-daemon --console=plain`：通过。
+- `.\gradlew.bat :app:assembleDebug --no-daemon --console=plain`：通过。
+- 已执行 R2 发版脚本，上传 `releases/ai-translate-1.0.2-debug.apk` 和 `releases/latest.json`。
+- R2 manifest GET 返回 200，APK HEAD 返回 200，APK 公开大小为 `142357364` 字节。
+- R2 manifest 已写入 SHA256：`C692F0798AAA54E0AD7D020D9C8F4F5611267CCDCBC788D03EC84295C88EDCF4`。
+- 当前 `adb devices` 无在线设备，文本朗读真机发声和 1.0.1 到 1.0.2 应用内更新点击验证待设备重新连接后补充。

@@ -10,7 +10,6 @@ import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.IBinder
 import android.provider.Settings
-import android.speech.tts.TextToSpeech
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
@@ -25,8 +24,8 @@ import com.mxwis.aitranslate.data.translation.TranslationRepository
 import com.mxwis.aitranslate.domain.ExternalTextInput
 import com.mxwis.aitranslate.domain.LanguageOption
 import com.mxwis.aitranslate.domain.Languages
-import com.mxwis.aitranslate.domain.SpeechLocaleResolver
 import com.mxwis.aitranslate.domain.TranslateRequest
+import com.mxwis.aitranslate.speech.SystemTextSpeaker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -38,20 +37,15 @@ class FloatingTranslateService : Service() {
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private lateinit var windowManager: WindowManager
     private lateinit var repository: TranslationRepository
+    private lateinit var speaker: SystemTextSpeaker
     private var bubbleView: View? = null
     private var panelView: View? = null
-    private var tts: TextToSpeech? = null
-    private var isTtsReady = false
-    private var hasTtsFailed = false
 
     override fun onCreate() {
         super.onCreate()
         windowManager = getSystemService(WindowManager::class.java)
         repository = (application as AiTranslateApplication).container.repository
-        tts = TextToSpeech(this) { status ->
-            isTtsReady = status == TextToSpeech.SUCCESS
-            hasTtsFailed = !isTtsReady
-        }
+        speaker = SystemTextSpeaker(this)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -71,9 +65,7 @@ class FloatingTranslateService : Service() {
     override fun onDestroy() {
         removePanel()
         removeBubble()
-        tts?.stop()
-        tts?.shutdown()
-        tts = null
+        speaker.shutdown()
         serviceScope.cancel()
         super.onDestroy()
     }
@@ -278,37 +270,9 @@ class FloatingTranslateService : Service() {
     }
 
     private fun speakText(text: String, language: LanguageOption) {
-        val content = text.trim()
-        if (content.isBlank()) {
-            Toast.makeText(this, "暂无可朗读文本", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        val engine = tts
-        when {
-            engine == null || hasTtsFailed -> {
-                Toast.makeText(this, "系统朗读不可用", Toast.LENGTH_SHORT).show()
-            }
-            !isTtsReady -> {
-                Toast.makeText(this, "朗读正在准备中", Toast.LENGTH_SHORT).show()
-            }
-            else -> {
-                val locale = SpeechLocaleResolver.resolve(language, content)
-                if (engine.isLanguageAvailable(locale) < TextToSpeech.LANG_AVAILABLE) {
-                    Toast.makeText(this, "设备未安装对应朗读语音", Toast.LENGTH_SHORT).show()
-                    return
-                }
-                engine.language = locale
-                val result = engine.speak(
-                    content,
-                    TextToSpeech.QUEUE_FLUSH,
-                    null,
-                    "ai-translate-overlay-${System.nanoTime()}",
-                )
-                if (result == TextToSpeech.ERROR) {
-                    Toast.makeText(this, "朗读启动失败", Toast.LENGTH_SHORT).show()
-                }
-            }
+        val result = speaker.speak(text, language)
+        if (!result.accepted && result.message != null) {
+            Toast.makeText(this, result.message, Toast.LENGTH_SHORT).show()
         }
     }
 

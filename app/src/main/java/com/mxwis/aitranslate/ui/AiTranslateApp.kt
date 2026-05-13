@@ -105,6 +105,9 @@ import com.mxwis.aitranslate.domain.LanguageOption
 import com.mxwis.aitranslate.domain.Languages
 import com.mxwis.aitranslate.domain.TranslationMode
 import com.mxwis.aitranslate.overlay.FloatingTranslateService
+import com.mxwis.aitranslate.speech.TtsRuntimeState
+import com.mxwis.aitranslate.speech.TtsSpeakResult
+import com.mxwis.aitranslate.speech.TtsStatus
 import com.mxwis.aitranslate.ui.theme.AiTranslateTheme
 import java.io.File
 import java.text.SimpleDateFormat
@@ -204,6 +207,12 @@ private fun AiTranslateContent(
     val clipboard = LocalClipboardManager.current
     val context = LocalContext.current
     val speaker = rememberTextSpeaker()
+    val ttsState by speaker.state.collectAsStateWithLifecycle()
+
+    fun speakText(text: String, language: LanguageOption) {
+        showTtsSpeakResult(context, speaker.speak(text, language))
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -239,8 +248,8 @@ private fun AiTranslateContent(
                     onOpenLanguagePicker = onOpenLanguagePicker,
                     onSwapLanguages = onSwapLanguages,
                     onTranslate = onTranslate,
-                    onSpeakSource = { speaker.speak(state.sourceText, state.sourceLanguage) },
-                    onSpeakTranslation = { speaker.speak(state.translatedText, state.targetLanguage) },
+                    onSpeakSource = { speakText(state.sourceText, state.sourceLanguage) },
+                    onSpeakTranslation = { speakText(state.translatedText, state.targetLanguage) },
                 )
                 AppSection.HISTORY -> HistoryScreen(
                     histories = state.histories,
@@ -266,6 +275,25 @@ private fun AiTranslateContent(
                     onClearHistory = onClearHistory,
                     onCheckAppUpdate = onCheckAppUpdate,
                     onDownloadAppUpdate = onDownloadAppUpdate,
+                    ttsState = ttsState,
+                    onRefreshTts = speaker::refresh,
+                    onInstallTtsData = {
+                        openFirstResolvableIntent(
+                            context = context,
+                            intents = listOf(speaker.installVoiceDataIntent()),
+                            failureMessage = "无法打开语音包安装页",
+                        )
+                    },
+                    onOpenTtsSettings = {
+                        openFirstResolvableIntent(
+                            context = context,
+                            intents = speaker.systemSettingsIntents(),
+                            failureMessage = "无法打开系统朗读设置",
+                        )
+                    },
+                    onTestTts = {
+                        speakText("你好，欢迎使用 AI 翻译文本朗读。", Languages.supported.first())
+                    },
                 )
             }
         }
@@ -311,13 +339,13 @@ private fun AiTranslateContent(
                     Toast.makeText(context, "已复制译文", Toast.LENGTH_SHORT).show()
                 },
                 onSpeakSource = {
-                    speaker.speak(
+                    speakText(
                         state.selectedHistory.sourceText,
                         Languages.byDisplayNameOrAuto(state.selectedHistory.sourceLanguage),
                     )
                 },
                 onSpeakTranslation = {
-                    speaker.speak(
+                    speakText(
                         state.selectedHistory.translatedText,
                         Languages.byDisplayNameOrAuto(state.selectedHistory.targetLanguage),
                     )
@@ -356,8 +384,8 @@ private fun AiTranslateContent(
                     clipboard.setText(AnnotatedString(text))
                     Toast.makeText(context, "已复制译文", Toast.LENGTH_SHORT).show()
                 },
-                onSpeakSource = { speaker.speak(state.miniSourceText, state.sourceLanguage) },
-                onSpeakTranslation = { speaker.speak(state.miniTranslatedText, state.targetLanguage) },
+                onSpeakSource = { speakText(state.miniSourceText, state.sourceLanguage) },
+                onSpeakTranslation = { speakText(state.miniTranslatedText, state.targetLanguage) },
                 onOpenFullTranslate = onOpenFullTranslateFromMini,
                 onClose = onCloseMiniTranslator,
             )
@@ -1535,6 +1563,11 @@ private fun SettingsScreen(
     onClearHistory: () -> Unit,
     onCheckAppUpdate: () -> Unit,
     onDownloadAppUpdate: () -> Unit,
+    ttsState: TtsRuntimeState,
+    onRefreshTts: () -> Unit,
+    onInstallTtsData: () -> Unit,
+    onOpenTtsSettings: () -> Unit,
+    onTestTts: () -> Unit,
 ) {
     var showProviderSheet by remember { mutableStateOf(false) }
     val context = LocalContext.current
@@ -1655,6 +1688,79 @@ private fun SettingsScreen(
                 SettingsStaticRow("默认源语言", "自动检测")
                 SettingsStaticRow("默认目标语言", "简体中文")
                 SettingsStaticRow("提示词风格", "简洁（仅输出译文）")
+            }
+        }
+        item {
+            SettingsModule(
+                title = "文本朗读",
+                icon = { Icon(Icons.AutoMirrored.Filled.VolumeUp, contentDescription = null) },
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("系统朗读", fontWeight = FontWeight.Bold)
+                    Text(
+                        text = ttsStatusText(ttsState),
+                        color = when (ttsState.status) {
+                            TtsStatus.READY, TtsStatus.SPEAKING -> MaterialTheme.colorScheme.primary
+                            TtsStatus.CHECKING -> MaterialTheme.colorScheme.onSurfaceVariant
+                            else -> MaterialTheme.colorScheme.error
+                        },
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+                ttsState.engineLabel?.let { label ->
+                    SettingsStaticRow("朗读引擎", label)
+                }
+                Text(
+                    text = ttsHelperText(ttsState),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (ttsState.status == TtsStatus.CHECKING || ttsState.status == TtsStatus.SPEAKING) {
+                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    OutlinedButton(
+                        onClick = onRefreshTts,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 8.dp),
+                    ) {
+                        Text("重新检测", maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                    OutlinedButton(
+                        onClick = onInstallTtsData,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 8.dp),
+                    ) {
+                        Text("安装语音包", maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                    OutlinedButton(
+                        onClick = onOpenTtsSettings,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 8.dp),
+                    ) {
+                        Text("打开系统设置", maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
+                Button(
+                    onClick = onTestTts,
+                    enabled = ttsState.canSpeak,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(8.dp),
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.VolumeUp, contentDescription = null)
+                    Spacer(Modifier.width(6.dp))
+                    Text("测试朗读")
+                }
             }
         }
         item {
@@ -1864,6 +1970,26 @@ private fun installAppUpdate(context: Context, apkPath: String) {
         }
 }
 
+private fun showTtsSpeakResult(context: Context, result: TtsSpeakResult) {
+    if (!result.accepted && result.message != null) {
+        Toast.makeText(context, result.message, Toast.LENGTH_SHORT).show()
+    }
+}
+
+private fun openFirstResolvableIntent(
+    context: Context,
+    intents: List<Intent>,
+    failureMessage: String,
+) {
+    for (intent in intents) {
+        val opened = runCatching {
+            context.startActivity(intent)
+        }.isSuccess
+        if (opened) return
+    }
+    Toast.makeText(context, failureMessage, Toast.LENGTH_SHORT).show()
+}
+
 private fun appUpdateStatusText(state: TranslateUiState): String {
     return when {
         state.isCheckingAppUpdate -> "正在检查 R2 更新清单"
@@ -1874,6 +2000,32 @@ private fun appUpdateStatusText(state: TranslateUiState): String {
         state.appUpdateMessage != null -> state.appUpdateMessage
         else -> "检查 R2 更新清单"
     }
+}
+
+private fun ttsStatusText(state: TtsRuntimeState): String {
+    return when (state.status) {
+        TtsStatus.CHECKING -> "检测中"
+        TtsStatus.READY -> "可用"
+        TtsStatus.SPEAKING -> "朗读中"
+        TtsStatus.NO_ENGINE -> "未安装引擎"
+        TtsStatus.INIT_FAILED -> "引擎不可用"
+        TtsStatus.VOICE_MISSING -> "语音包缺失"
+        TtsStatus.ERROR -> "朗读失败"
+        TtsStatus.SHUTDOWN -> "已关闭"
+    }
+}
+
+private fun ttsHelperText(state: TtsRuntimeState): String {
+    return when (state.status) {
+        TtsStatus.READY -> "系统文字转语音服务已准备好。"
+        TtsStatus.SPEAKING -> "正在播放朗读内容。"
+        TtsStatus.CHECKING -> "正在检测系统文字转语音服务。"
+        TtsStatus.NO_ENGINE -> "请安装或启用系统文字转语音服务。"
+        TtsStatus.INIT_FAILED -> "默认朗读引擎初始化失败，可重新检测或打开系统设置切换引擎。"
+        TtsStatus.VOICE_MISSING -> "当前语言缺少语音包，可安装语音包后重新检测。"
+        TtsStatus.ERROR -> "朗读播放失败，可重新检测或打开系统设置修复。"
+        TtsStatus.SHUTDOWN -> "朗读服务已随页面关闭。"
+    }.let { "${state.message}。$it" }
 }
 
 @Composable
