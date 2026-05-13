@@ -23,12 +23,14 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
@@ -71,6 +73,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -87,6 +90,8 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import com.mxwis.aitranslate.BuildConfig
 import com.mxwis.aitranslate.R
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.Lifecycle
@@ -140,9 +145,11 @@ fun AiTranslateApp(viewModel: TranslateViewModel) {
             onCloseHistoryDetail = viewModel::closeHistoryDetail,
             onCloseMiniTranslator = viewModel::closeMiniTranslator,
             onTranslateMini = viewModel::translateMini,
+            onConsumeMiniAutoTranslateRequest = viewModel::consumeMiniAutoTranslateRequest,
             onOpenFullTranslateFromMini = viewModel::openFullTranslateFromMini,
             onAcceptClipboardQuickTranslate = viewModel::acceptClipboardQuickTranslate,
             onDismissClipboardQuickTranslate = viewModel::dismissClipboardQuickTranslate,
+            onCheckAppUpdate = viewModel::checkAppUpdate,
         )
     }
 }
@@ -181,12 +188,15 @@ private fun AiTranslateContent(
     onCloseHistoryDetail: () -> Unit,
     onCloseMiniTranslator: () -> Unit,
     onTranslateMini: () -> Unit,
+    onConsumeMiniAutoTranslateRequest: () -> Unit,
     onOpenFullTranslateFromMini: () -> Unit,
     onAcceptClipboardQuickTranslate: () -> Unit,
     onDismissClipboardQuickTranslate: () -> Unit,
+    onCheckAppUpdate: () -> Unit,
 ) {
     val clipboard = LocalClipboardManager.current
     val context = LocalContext.current
+    val speaker = rememberTextSpeaker()
     Scaffold(
         topBar = {
             TopAppBar(
@@ -222,6 +232,8 @@ private fun AiTranslateContent(
                     onOpenLanguagePicker = onOpenLanguagePicker,
                     onSwapLanguages = onSwapLanguages,
                     onTranslate = onTranslate,
+                    onSpeakSource = { speaker.speak(state.sourceText, state.sourceLanguage) },
+                    onSpeakTranslation = { speaker.speak(state.translatedText, state.targetLanguage) },
                 )
                 AppSection.HISTORY -> HistoryScreen(
                     histories = state.histories,
@@ -245,6 +257,7 @@ private fun AiTranslateContent(
                     onOpenModelManager = { onSectionSelected(AppSection.MODEL) },
                     onDefaultModeChanged = onDefaultModeChanged,
                     onClearHistory = onClearHistory,
+                    onCheckAppUpdate = onCheckAppUpdate,
                 )
             }
         }
@@ -282,6 +295,18 @@ private fun AiTranslateContent(
                     clipboard.setText(AnnotatedString(text))
                     Toast.makeText(context, "已复制译文", Toast.LENGTH_SHORT).show()
                 },
+                onSpeakSource = {
+                    speaker.speak(
+                        state.selectedHistory.sourceText,
+                        Languages.byDisplayNameOrAuto(state.selectedHistory.sourceLanguage),
+                    )
+                },
+                onSpeakTranslation = {
+                    speaker.speak(
+                        state.selectedHistory.translatedText,
+                        Languages.byDisplayNameOrAuto(state.selectedHistory.targetLanguage),
+                    )
+                },
                 onDelete = {
                     onDeleteHistory(state.selectedHistory)
                     onCloseHistoryDetail()
@@ -291,8 +316,8 @@ private fun AiTranslateContent(
     }
 
     if (state.isClipboardSuggestionOpen) {
-        ModalBottomSheet(onDismissRequest = onDismissClipboardQuickTranslate) {
-            ClipboardQuickTranslateSheet(
+        Dialog(onDismissRequest = onDismissClipboardQuickTranslate) {
+            ClipboardQuickTranslateCard(
                 clipboardText = state.clipboardCandidateText,
                 onAccept = onAcceptClipboardQuickTranslate,
                 onDismiss = onDismissClipboardQuickTranslate,
@@ -301,8 +326,14 @@ private fun AiTranslateContent(
     }
 
     if (state.isMiniTranslatorOpen) {
-        ModalBottomSheet(onDismissRequest = onCloseMiniTranslator) {
-            MiniTranslateSheet(
+        if (state.shouldAutoTranslateMini && !state.isMiniTranslating && state.miniSourceText.isNotBlank()) {
+            LaunchedEffect(state.miniSourceText, state.shouldAutoTranslateMini) {
+                onConsumeMiniAutoTranslateRequest()
+                onTranslateMini()
+            }
+        }
+        Dialog(onDismissRequest = onCloseMiniTranslator) {
+            MiniTranslateCard(
                 state = state,
                 onModeSelected = onModeSelected,
                 onTranslate = onTranslateMini,
@@ -310,6 +341,8 @@ private fun AiTranslateContent(
                     clipboard.setText(AnnotatedString(text))
                     Toast.makeText(context, "已复制译文", Toast.LENGTH_SHORT).show()
                 },
+                onSpeakSource = { speaker.speak(state.miniSourceText, state.sourceLanguage) },
+                onSpeakTranslation = { speaker.speak(state.miniTranslatedText, state.targetLanguage) },
                 onOpenFullTranslate = onOpenFullTranslateFromMini,
                 onClose = onCloseMiniTranslator,
             )
@@ -359,6 +392,8 @@ private fun TranslateScreen(
     onOpenLanguagePicker: (LanguagePickerTarget) -> Unit,
     onSwapLanguages: () -> Unit,
     onTranslate: () -> Unit,
+    onSpeakSource: () -> Unit,
+    onSpeakTranslation: () -> Unit,
 ) {
     val clipboard = LocalClipboardManager.current
     val context = LocalContext.current
@@ -395,11 +430,19 @@ private fun TranslateScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text("输入原文", style = MaterialTheme.typography.titleSmall)
-                        IconButton(
-                            onClick = onClearInput,
-                            enabled = state.sourceText.isNotEmpty(),
-                        ) {
-                            Icon(Icons.Default.Clear, contentDescription = "清空")
+                        Row {
+                            IconButton(
+                                onClick = onSpeakSource,
+                                enabled = state.sourceText.isNotBlank(),
+                            ) {
+                                Icon(Icons.AutoMirrored.Filled.VolumeUp, contentDescription = "朗读原文")
+                            }
+                            IconButton(
+                                onClick = onClearInput,
+                                enabled = state.sourceText.isNotEmpty(),
+                            ) {
+                                Icon(Icons.Default.Clear, contentDescription = "清空")
+                            }
                         }
                     }
                     OutlinedTextField(
@@ -457,6 +500,12 @@ private fun TranslateScreen(
                         Text("译文", style = MaterialTheme.typography.titleSmall)
                         Row {
                             IconButton(
+                                onClick = onSpeakTranslation,
+                                enabled = state.translatedText.isNotBlank(),
+                            ) {
+                                Icon(Icons.AutoMirrored.Filled.VolumeUp, contentDescription = "朗读译文")
+                            }
+                            IconButton(
                                 onClick = {
                                     clipboard.setText(AnnotatedString(state.translatedText))
                                     Toast.makeText(context, "已复制译文", Toast.LENGTH_SHORT).show()
@@ -492,261 +541,316 @@ private fun TranslateScreen(
 }
 
 @Composable
-private fun MiniTranslateSheet(
+private fun MiniTranslateCard(
     state: TranslateUiState,
     onModeSelected: (TranslationMode) -> Unit,
     onTranslate: () -> Unit,
     onCopyTranslation: (String) -> Unit,
+    onSpeakSource: () -> Unit,
+    onSpeakTranslation: () -> Unit,
     onOpenFullTranslate: () -> Unit,
     onClose: () -> Unit,
 ) {
-    Column(
+    Surface(
         modifier = Modifier
-            .fillMaxWidth()
-            .imePadding()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+            .widthIn(max = 430.dp)
+            .fillMaxWidth(0.92f),
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 10.dp,
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "快速翻译",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                )
-                Text(
-                    text = "来自${state.miniSourceLabel}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            IconButton(onClick = onClose) {
-                Icon(Icons.Default.Clear, contentDescription = "关闭")
-            }
-        }
-
-        OutlinedCard(shape = RoundedCornerShape(8.dp)) {
-            Column(
-                modifier = Modifier.padding(14.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Text(
-                    text = "原文",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                    text = state.miniSourceText,
-                    style = MaterialTheme.typography.bodyLarge,
-                    maxLines = 5,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-        }
-
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(8.dp),
-            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.28f),
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .imePadding()
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Row(
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Icon(Icons.Default.Translate, contentDescription = null)
-                Text(
-                    text = "${state.sourceLanguage.displayName} → ${state.targetLanguage.displayName}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "快速翻译",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        text = "来自${state.miniSourceLabel}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                IconButton(onClick = onClose) {
+                    Icon(Icons.Default.Clear, contentDescription = "关闭")
+                }
             }
-        }
 
-        Text("翻译模式", fontWeight = FontWeight.Bold)
-        ModeSelector(
-            selected = state.selectedMode,
-            onSelected = onModeSelected,
-        )
-
-        if (state.miniErrorMessage != null || state.miniInfoMessage != null) {
-            MessageBanner(
-                error = state.miniErrorMessage,
-                info = state.miniInfoMessage,
+            FloatingTextSection(
+                title = "原文",
+                text = state.miniSourceText,
+                placeholder = "",
+                maxLines = 5,
+                action = {
+                    IconButton(
+                        onClick = onSpeakSource,
+                        enabled = state.miniSourceText.isNotBlank(),
+                    ) {
+                        Icon(Icons.AutoMirrored.Filled.VolumeUp, contentDescription = "朗读原文")
+                    }
+                },
             )
-        }
 
-        Button(
-            onClick = onTranslate,
-            enabled = !state.isMiniTranslating && state.miniSourceText.isNotBlank(),
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(50.dp),
-            shape = RoundedCornerShape(8.dp),
-        ) {
-            Icon(Icons.Default.Translate, contentDescription = null)
-            Spacer(Modifier.width(8.dp))
-            Text(if (state.isMiniTranslating) "正在翻译" else "翻译")
-        }
-
-        OutlinedCard(shape = RoundedCornerShape(8.dp)) {
-            Column(
-                modifier = Modifier.padding(14.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.28f),
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
+                    Icon(Icons.Default.Translate, contentDescription = null)
                     Text(
-                        text = "译文",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    IconButton(
-                        onClick = { onCopyTranslation(state.miniTranslatedText) },
-                        enabled = state.miniTranslatedText.isNotBlank(),
-                    ) {
-                        Icon(Icons.Default.ContentCopy, contentDescription = "复制译文")
-                    }
-                }
-                if (state.isMiniTranslating) {
-                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                    Text(
-                        text = "翻译中，请稍候...",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                } else {
-                    Text(
-                        text = state.miniTranslatedText.ifBlank { "译文会显示在这里" },
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = if (state.miniTranslatedText.isBlank()) {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        } else {
-                            MaterialTheme.colorScheme.onSurface
-                        },
-                        modifier = Modifier.heightIn(min = 80.dp),
+                        text = "${state.sourceLanguage.displayName} → ${state.targetLanguage.displayName}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
             }
-        }
 
-        OutlinedButton(
-            onClick = onOpenFullTranslate,
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(8.dp),
-        ) {
-            Icon(Icons.Default.Home, contentDescription = null)
-            Spacer(Modifier.width(6.dp))
-            Text("转到完整翻译页")
+            Text("翻译模式", fontWeight = FontWeight.Bold)
+            ModeSelector(
+                selected = state.selectedMode,
+                onSelected = onModeSelected,
+            )
+
+            if (state.miniErrorMessage != null || state.miniInfoMessage != null) {
+                MessageBanner(
+                    error = state.miniErrorMessage,
+                    info = state.miniInfoMessage,
+                )
+            }
+
+            Button(
+                onClick = onTranslate,
+                enabled = !state.isMiniTranslating && state.miniSourceText.isNotBlank(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp),
+                shape = RoundedCornerShape(8.dp),
+            ) {
+                Icon(Icons.Default.Translate, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text(if (state.isMiniTranslating) "正在翻译" else "翻译")
+            }
+
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+            ) {
+                Column(
+                    modifier = Modifier.padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = "译文",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Row {
+                            IconButton(
+                                onClick = onSpeakTranslation,
+                                enabled = state.miniTranslatedText.isNotBlank(),
+                            ) {
+                                Icon(Icons.AutoMirrored.Filled.VolumeUp, contentDescription = "朗读译文")
+                            }
+                            IconButton(
+                                onClick = { onCopyTranslation(state.miniTranslatedText) },
+                                enabled = state.miniTranslatedText.isNotBlank(),
+                            ) {
+                                Icon(Icons.Default.ContentCopy, contentDescription = "复制译文")
+                            }
+                        }
+                    }
+                    if (state.isMiniTranslating) {
+                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                        Text(
+                            text = "翻译中，请稍候...",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    } else {
+                        Text(
+                            text = state.miniTranslatedText.ifBlank { "译文会显示在这里" },
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = if (state.miniTranslatedText.isBlank()) {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            } else {
+                                MaterialTheme.colorScheme.onSurface
+                            },
+                            modifier = Modifier.heightIn(min = 80.dp),
+                        )
+                    }
+                }
+            }
+
+            OutlinedButton(
+                onClick = onOpenFullTranslate,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp),
+            ) {
+                Icon(Icons.Default.Home, contentDescription = null)
+                Spacer(Modifier.width(6.dp))
+                Text("转到完整翻译页")
+            }
         }
-        Spacer(Modifier.height(12.dp))
     }
 }
 
 @Composable
-private fun ClipboardQuickTranslateSheet(
+private fun ClipboardQuickTranslateCard(
     clipboardText: String,
     onAccept: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    Column(
+    Surface(
         modifier = Modifier
-            .fillMaxWidth()
-            .imePadding()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+            .widthIn(max = 410.dp)
+            .fillMaxWidth(0.92f),
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 10.dp,
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "剪贴板快捷翻译",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                )
-                Text(
-                    text = "检测到剪贴板文本，是否快速翻译？",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            IconButton(onClick = onDismiss) {
-                Icon(Icons.Default.Clear, contentDescription = "忽略")
-            }
-        }
-
-        OutlinedCard(shape = RoundedCornerShape(8.dp)) {
-            Column(
-                modifier = Modifier.padding(14.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                Text(
-                    text = "剪贴板内容",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                    text = clipboardText,
-                    style = MaterialTheme.typography.bodyLarge,
-                    maxLines = 5,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-        }
-
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(8.dp),
-            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.28f),
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Row(
-                modifier = Modifier.padding(12.dp),
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Icon(Icons.Default.Check, contentDescription = null)
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "剪贴板快捷翻译",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        text = "检测到剪贴板文本",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Default.Clear, contentDescription = "忽略")
+                }
+            }
+
+            FloatingTextSection(
+                title = "剪贴板内容",
+                text = clipboardText,
+                placeholder = "",
+                maxLines = 5,
+            )
+
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.28f),
+            ) {
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Icon(Icons.Default.Check, contentDescription = null)
+                    Text(
+                        text = "仅在前台读取，确认后才翻译",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                OutlinedButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(8.dp),
+                ) {
+                    Text("忽略")
+                }
+                Button(
+                    onClick = onAccept,
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(8.dp),
+                ) {
+                    Icon(Icons.Default.Translate, contentDescription = null)
+                    Spacer(Modifier.width(6.dp))
+                    Text("快速翻译")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FloatingTextSection(
+    title: String,
+    text: String,
+    placeholder: String,
+    maxLines: Int,
+    action: (@Composable () -> Unit)? = null,
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(8.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Text(
-                    text = "仅在前台读取，确认后才翻译",
-                    style = MaterialTheme.typography.bodySmall,
+                    text = title,
+                    style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                action?.invoke()
             }
+            Text(
+                text = text.ifBlank { placeholder },
+                style = MaterialTheme.typography.bodyLarge,
+                color = if (text.isBlank()) {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                },
+                maxLines = maxLines,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            OutlinedButton(
-                onClick = onDismiss,
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(8.dp),
-            ) {
-                Text("忽略")
-            }
-            Button(
-                onClick = onAccept,
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(8.dp),
-            ) {
-                Icon(Icons.Default.Translate, contentDescription = null)
-                Spacer(Modifier.width(6.dp))
-                Text("快速翻译")
-            }
-        }
-        Spacer(Modifier.height(12.dp))
     }
 }
 
@@ -1175,6 +1279,8 @@ private fun HistoryItem(
 private fun HistoryDetailSheet(
     entity: TranslationHistoryEntity,
     onCopyTranslation: (String) -> Unit,
+    onSpeakSource: () -> Unit,
+    onSpeakTranslation: () -> Unit,
     onDelete: () -> Unit,
 ) {
     Column(
@@ -1221,11 +1327,20 @@ private fun HistoryDetailSheet(
                 modifier = Modifier.padding(14.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                Text(
-                    text = "原文",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(
+                        text = "原文",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    IconButton(onClick = onSpeakSource) {
+                        Icon(Icons.AutoMirrored.Filled.VolumeUp, contentDescription = "朗读原文")
+                    }
+                }
                 Text(
                     text = entity.sourceText,
                     style = MaterialTheme.typography.bodyLarge,
@@ -1247,8 +1362,13 @@ private fun HistoryDetailSheet(
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    IconButton(onClick = { onCopyTranslation(entity.translatedText) }) {
-                        Icon(Icons.Default.ContentCopy, contentDescription = "复制译文")
+                    Row {
+                        IconButton(onClick = onSpeakTranslation) {
+                            Icon(Icons.AutoMirrored.Filled.VolumeUp, contentDescription = "朗读译文")
+                        }
+                        IconButton(onClick = { onCopyTranslation(entity.translatedText) }) {
+                            Icon(Icons.Default.ContentCopy, contentDescription = "复制译文")
+                        }
                     }
                 }
                 Text(
@@ -1398,6 +1518,7 @@ private fun SettingsScreen(
     onOpenModelManager: () -> Unit,
     onDefaultModeChanged: (TranslationMode) -> Unit,
     onClearHistory: () -> Unit,
+    onCheckAppUpdate: () -> Unit,
 ) {
     var showProviderSheet by remember { mutableStateOf(false) }
     val context = LocalContext.current
@@ -1611,7 +1732,49 @@ private fun SettingsScreen(
                 title = "关于与许可",
                 icon = { Icon(Icons.Default.Home, contentDescription = null) },
             ) {
-                SettingsStaticRow("应用版本", "1.0.0")
+                SettingsStaticRow("应用版本", "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
+                SettingsActionRow(
+                    title = "应用更新",
+                    body = appUpdateStatusText(state),
+                    icon = { Icon(Icons.Default.Download, contentDescription = null) },
+                    onClick = onCheckAppUpdate,
+                )
+                if (state.isCheckingAppUpdate) {
+                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                }
+                if (state.appUpdateError != null || state.appUpdateMessage != null) {
+                    MessageBanner(
+                        error = state.appUpdateError,
+                        info = state.appUpdateMessage,
+                    )
+                }
+                state.availableAppUpdate?.let { release ->
+                    Text(
+                        text = buildString {
+                            append("最新版本：${release.versionName}")
+                            if (release.sizeBytes > 0L) append(" · ${formatBytes(release.sizeBytes)}")
+                            if (release.required) append(" · 必须更新")
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    release.notes.take(3).forEach { note ->
+                        Text(
+                            text = "• $note",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Button(
+                        onClick = { openExternalUrl(context, release.apkUrl) },
+                        enabled = release.apkUrl.isNotBlank(),
+                        shape = RoundedCornerShape(8.dp),
+                    ) {
+                        Icon(Icons.Default.Download, contentDescription = null)
+                        Spacer(Modifier.width(6.dp))
+                        Text("下载更新")
+                    }
+                }
                 SettingsStaticRow("开源与许可", "正式发布前补充 Hy-MT License")
                 SettingsStaticRow("隐私政策", "本地配置仅保存在设备内")
             }
@@ -1638,6 +1801,31 @@ private fun openOverlayPermissionSettings(context: Context) {
         Uri.parse("package:${context.packageName}"),
     ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     context.startActivity(intent)
+}
+
+private fun openExternalUrl(context: Context, url: String) {
+    val trimmedUrl = url.trim()
+    if (trimmedUrl.isBlank()) {
+        Toast.makeText(context, "更新包地址为空", Toast.LENGTH_SHORT).show()
+        return
+    }
+
+    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(trimmedUrl))
+        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    runCatching { context.startActivity(intent) }
+        .onFailure {
+            Toast.makeText(context, "无法打开更新下载链接", Toast.LENGTH_SHORT).show()
+        }
+}
+
+private fun appUpdateStatusText(state: TranslateUiState): String {
+    return when {
+        state.isCheckingAppUpdate -> "正在检查 R2 更新清单"
+        state.availableAppUpdate != null -> "发现 ${state.availableAppUpdate.versionName}，可下载更新"
+        state.appUpdateError != null -> state.appUpdateError
+        state.appUpdateMessage != null -> state.appUpdateMessage
+        else -> "检查 R2 更新清单"
+    }
 }
 
 @Composable

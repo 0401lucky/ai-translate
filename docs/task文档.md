@@ -646,3 +646,85 @@
 - 已更新并上传 R2 `models/models.json`，分片 URL 均指向正式域名。
 - 正式域名访问验证通过：manifest GET 返回 200，6 个模型分片 HEAD 返回 200，`part00` Range 请求返回 206。
 - `.\gradlew.bat :app:compileDebugKotlin --no-daemon --console=plain`：通过。
+
+## Task 020：剪贴板中央浮层翻译与文本朗读
+
+### 目标
+
+优化剪贴板快捷翻译的使用手感，并为原文和译文补充系统朗读能力。剪贴板流程调整为前台检测后弹出中央确认卡片，用户确认后直接打开中央快速翻译卡片并自动翻译。
+
+### 范围
+
+- 生成新的中央浮层设计图并保存到 `docs/ui/`。
+- 剪贴板确认提示由底部面板改为中央卡片。
+- App 内快速翻译面板由底部面板改为中央浮层卡片。
+- 剪贴板确认后自动触发快速翻译，不再要求再次点击翻译。
+- 悬浮球剪贴板翻译窗改为居中的悬浮卡片。
+- 主翻译页、快速翻译卡片、历史详情和悬浮翻译窗支持原文与译文朗读。
+- 使用 Android 系统 `TextToSpeech`，按已选语言或文本字符特征选择朗读语言。
+
+### 不包含
+
+- 不做后台剪贴板监听。
+- 不做无确认自动提交翻译。
+- 不新增录音、音频或云端语音权限。
+- 不做云端 TTS、语速调节、音色选择和语音包下载管理。
+
+### 完成标准
+
+- Debug APK 能成功构建。
+- 单元测试通过。
+- 剪贴板检测后显示中央确认卡片。
+- 点击快速翻译后打开中央快速翻译卡片并自动开始翻译。
+- 原文和译文朗读按钮在主翻译页、快速翻译卡片、历史详情和悬浮窗中可见。
+- 设备不支持对应 TTS 语言时有明确提示，且不影响翻译。
+- 悬浮球点击后的翻译窗位于屏幕中央，并保留关闭、复制和朗读能力。
+
+### 验证记录
+
+- UI 设计图已生成并保存到 `docs/ui/clipboard-tts-floating-card-design.png`。
+- `.\gradlew.bat :app:compileDebugKotlin --no-daemon --console=plain`：通过。
+- `.\gradlew.bat testDebugUnitTest --no-daemon --console=plain`：通过，命令在 60 秒上限内完成。
+- `.\gradlew.bat assembleDebug --no-daemon --console=plain`：通过。
+- Debug APK 已生成：`app/build/outputs/apk/debug/app-debug.apk`。
+- `adb devices` 当前无在线设备，未能补充中央剪贴板卡片、自动翻译、朗读发声和悬浮窗居中卡片的真机点击验证。
+
+## Task 021：应用内更新入口
+
+### 目标
+
+在 App 设置页补充应用内更新入口，读取 R2 的 `releases/latest.json` 更新清单，避免后续发布 APK 后用户没有入口检查和下载更新。
+
+### 范围
+
+- 生成设置页应用更新入口设计图并保存到 `docs/ui/`。
+- 在设置页“关于与许可”模块加入“应用更新”入口。
+- 从 `https://download.204152.xyz/releases/latest.json` 拉取 Android 更新清单。
+- 对比当前 `versionCode` 与清单中的最新 `versionCode`。
+- 显示检查中、已是最新、发现新版本、清单未配置安装包和失败状态。
+- 发现可用新版本时提供下载更新按钮，打开清单中的 APK 地址。
+
+### 不包含
+
+- 不自动静默安装 APK。
+- 不绕过 Android 系统安装确认。
+- 不在本次生成或上传正式签名 APK。
+
+### 完成标准
+
+- 设置页存在明确的“应用更新 / 检查更新”入口。
+- 点击入口会请求 R2 更新清单并更新页面状态。
+- 清单中没有 APK 地址时给出明确提示。
+- 单元测试通过。
+- Debug APK 构建通过。
+
+### 验证记录
+
+- UI 设计图已生成并保存到 `docs/ui/app-update-entry-design.png`。
+- 已新增 R2 更新清单解析与版本对比逻辑。
+- 已在设置页“关于与许可”模块加入“应用更新”入口、检查状态、结果提示和下载更新按钮。
+- R2 更新清单访问验证通过：`https://download.204152.xyz/releases/latest.json` 返回 200，当前为 `versionCode = 1` 且 `apkUrl` 为空的占位清单。
+- `.\gradlew.bat :app:compileDebugKotlin --no-daemon --console=plain`：通过。
+- `.\gradlew.bat testDebugUnitTest --no-daemon --console=plain`：通过。
+- `.\gradlew.bat assembleDebug --no-daemon --console=plain`：通过。
+- 当前未连接真机，设置页点击检查更新的设备侧交互验证待补充。

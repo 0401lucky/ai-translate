@@ -25,7 +25,7 @@ object ExternalTextInput {
     fun extractClipboardText(clipboardText: CharSequence?): String? {
         return clipboardText
             ?.toString()
-            ?.trim()
+            ?.let(ClipboardQuickTranslatePolicy::normalize)
             ?.takeIf { it.isNotBlank() }
     }
 

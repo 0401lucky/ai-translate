@@ -28,4 +28,9 @@ object Languages {
         if (code == auto.code) return auto
         return supported.firstOrNull { it.code == code } ?: supported.first()
     }
+
+    fun byDisplayNameOrAuto(displayName: String): LanguageOption {
+        if (displayName == auto.displayName) return auto
+        return supported.firstOrNull { it.displayName == displayName } ?: auto
+    }
 }

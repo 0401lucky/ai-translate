@@ -11,6 +11,7 @@ import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.IBinder
 import android.provider.Settings
+import android.speech.tts.TextToSpeech
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
@@ -23,7 +24,9 @@ import android.widget.Toast
 import com.mxwis.aitranslate.AiTranslateApplication
 import com.mxwis.aitranslate.data.translation.TranslationRepository
 import com.mxwis.aitranslate.domain.ExternalTextInput
+import com.mxwis.aitranslate.domain.LanguageOption
 import com.mxwis.aitranslate.domain.Languages
+import com.mxwis.aitranslate.domain.SpeechLocaleResolver
 import com.mxwis.aitranslate.domain.TranslateRequest
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -38,11 +41,18 @@ class FloatingTranslateService : Service() {
     private lateinit var repository: TranslationRepository
     private var bubbleView: View? = null
     private var panelView: View? = null
+    private var tts: TextToSpeech? = null
+    private var isTtsReady = false
+    private var hasTtsFailed = false
 
     override fun onCreate() {
         super.onCreate()
         windowManager = getSystemService(WindowManager::class.java)
         repository = (application as AiTranslateApplication).container.repository
+        tts = TextToSpeech(this) { status ->
+            isTtsReady = status == TextToSpeech.SUCCESS
+            hasTtsFailed = !isTtsReady
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -58,6 +68,9 @@ class FloatingTranslateService : Service() {
     override fun onDestroy() {
         removePanel()
         removeBubble()
+        tts?.stop()
+        tts?.shutdown()
+        tts = null
         serviceScope.cancel()
         super.onDestroy()
     }
@@ -116,6 +129,8 @@ class FloatingTranslateService : Service() {
         val sourceText = bodyText("正在读取剪贴板...", BODY_TEXT, maxLines = 4)
         val statusText = bodyText("等待翻译", SUB_TEXT, maxLines = 2)
         val resultText = bodyText("译文会显示在这里", SUB_TEXT, maxLines = 8)
+        val sourceSpeakButton = actionButton("朗读原文").apply { isEnabled = false }
+        val resultSpeakButton = actionButton("朗读译文").apply { isEnabled = false }
         val copyButton = actionButton("复制译文").apply {
             isEnabled = false
         }
@@ -147,30 +162,44 @@ class FloatingTranslateService : Service() {
             gravity = Gravity.END
             setPadding(0, dp(8), 0, 0)
         }
-        actions.addView(copyButton)
+        actions.addView(sourceSpeakButton, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+        actions.addView(resultSpeakButton, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+        actions.addView(copyButton, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
         panel.addView(actions)
 
+        val panelWidth = (resources.displayMetrics.widthPixels - dp(32)).coerceAtMost(dp(420))
         val params = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.MATCH_PARENT,
+            panelWidth,
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
             PixelFormat.TRANSLUCENT,
         ).apply {
-            gravity = Gravity.BOTTOM
+            gravity = Gravity.CENTER
             x = 0
             y = 0
         }
 
         windowManager.addView(panel, params)
         panelView = panel
-        panel.post { translateClipboard(sourceText, statusText, resultText, copyButton) }
+        panel.post {
+            translateClipboard(
+                sourceTextView = sourceText,
+                statusTextView = statusText,
+                resultTextView = resultText,
+                sourceSpeakButton = sourceSpeakButton,
+                resultSpeakButton = resultSpeakButton,
+                copyButton = copyButton,
+            )
+        }
     }
 
     private fun translateClipboard(
         sourceTextView: TextView,
         statusTextView: TextView,
         resultTextView: TextView,
+        sourceSpeakButton: Button,
+        resultSpeakButton: Button,
         copyButton: Button,
     ) {
         val clipboardText = readClipboardText()
@@ -183,6 +212,10 @@ class FloatingTranslateService : Service() {
         }
 
         sourceTextView.text = clipboardText
+        sourceSpeakButton.isEnabled = true
+        sourceSpeakButton.setOnClickListener {
+            speakText(clipboardText, Languages.auto)
+        }
         statusTextView.text = "正在翻译..."
         resultTextView.text = "请稍候"
 
@@ -202,6 +235,10 @@ class FloatingTranslateService : Service() {
                 resultTextView.text = output.translatedText
                 resultTextView.setTextColor(BODY_TEXT)
                 copyButton.isEnabled = true
+                resultSpeakButton.isEnabled = true
+                resultSpeakButton.setOnClickListener {
+                    speakText(output.translatedText, Languages.supported.first())
+                }
                 copyButton.setOnClickListener {
                     val clipboard = getSystemService(ClipboardManager::class.java)
                     clipboard.setPrimaryClip(ClipData.newPlainText("译文", output.translatedText))
@@ -226,6 +263,41 @@ class FloatingTranslateService : Service() {
             val clip = clipboard.primaryClip?.takeIf { it.itemCount > 0 } ?: return null
             ExternalTextInput.extractClipboardText(clip.getItemAt(0).coerceToText(this))
         }.getOrNull()
+    }
+
+    private fun speakText(text: String, language: LanguageOption) {
+        val content = text.trim()
+        if (content.isBlank()) {
+            Toast.makeText(this, "暂无可朗读文本", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val engine = tts
+        when {
+            engine == null || hasTtsFailed -> {
+                Toast.makeText(this, "系统朗读不可用", Toast.LENGTH_SHORT).show()
+            }
+            !isTtsReady -> {
+                Toast.makeText(this, "朗读正在准备中", Toast.LENGTH_SHORT).show()
+            }
+            else -> {
+                val locale = SpeechLocaleResolver.resolve(language, content)
+                if (engine.isLanguageAvailable(locale) < TextToSpeech.LANG_AVAILABLE) {
+                    Toast.makeText(this, "设备未安装对应朗读语音", Toast.LENGTH_SHORT).show()
+                    return
+                }
+                engine.language = locale
+                val result = engine.speak(
+                    content,
+                    TextToSpeech.QUEUE_FLUSH,
+                    null,
+                    "ai-translate-overlay-${System.nanoTime()}",
+                )
+                if (result == TextToSpeech.ERROR) {
+                    Toast.makeText(this, "朗读启动失败", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
     }
 
     private fun titleBlock(): LinearLayout {

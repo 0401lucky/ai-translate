@@ -2,12 +2,16 @@ package com.mxwis.aitranslate.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mxwis.aitranslate.BuildConfig
 import com.mxwis.aitranslate.data.settings.CloudProviderSettings
 import com.mxwis.aitranslate.data.history.TranslationHistoryEntity
 import com.mxwis.aitranslate.data.model.ModelState
 import com.mxwis.aitranslate.data.settings.AppSettings
 import com.mxwis.aitranslate.data.settings.DEFAULT_MODEL_NAME
-import com.mxwis.aitranslate.data.translation.TranslationRepository
+import com.mxwis.aitranslate.data.translation.TranslationRepositoryContract
+import com.mxwis.aitranslate.data.update.AppUpdateCheckResult
+import com.mxwis.aitranslate.data.update.AppUpdateRelease
+import com.mxwis.aitranslate.domain.ClipboardQuickTranslatePolicy
 import com.mxwis.aitranslate.domain.LanguageOption
 import com.mxwis.aitranslate.domain.Languages
 import com.mxwis.aitranslate.domain.TranslateRequest
@@ -57,14 +61,20 @@ data class TranslateUiState(
     val isMiniTranslating: Boolean = false,
     val miniErrorMessage: String? = null,
     val miniInfoMessage: String? = null,
+    val shouldAutoTranslateMini: Boolean = false,
     val isClipboardSuggestionOpen: Boolean = false,
     val clipboardCandidateText: String = "",
+    val isCheckingAppUpdate: Boolean = false,
+    val availableAppUpdate: AppUpdateRelease? = null,
+    val appUpdateMessage: String? = null,
+    val appUpdateError: String? = null,
     val errorMessage: String? = null,
     val infoMessage: String? = null,
 )
 
 class TranslateViewModel(
-    private val repository: TranslationRepository,
+    private val repository: TranslationRepositoryContract,
+    private val currentVersionCode: Int = BuildConfig.VERSION_CODE,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(TranslateUiState())
     val uiState: StateFlow<TranslateUiState> = _uiState.asStateFlow()
@@ -200,6 +210,7 @@ class TranslateViewModel(
     fun openMiniTranslator(
         text: String,
         sourceLabel: String = "系统划词 / 分享",
+        autoTranslate: Boolean = false,
     ) {
         val normalized = text.trim()
         if (normalized.isBlank()) return
@@ -213,6 +224,7 @@ class TranslateViewModel(
                 miniTranslatedText = "",
                 miniErrorMessage = null,
                 miniInfoMessage = "已接收${sourceLabel}文本",
+                shouldAutoTranslateMini = autoTranslate,
                 isClipboardSuggestionOpen = false,
                 clipboardCandidateText = "",
                 errorMessage = null,
@@ -227,21 +239,25 @@ class TranslateViewModel(
                 isMiniTranslatorOpen = false,
                 miniErrorMessage = null,
                 miniInfoMessage = null,
+                shouldAutoTranslateMini = false,
             )
         }
     }
 
     fun offerClipboardQuickTranslate(text: String) {
-        val normalized = text.trim()
+        val normalized = ClipboardQuickTranslatePolicy.normalize(text)
         if (normalized.isBlank()) return
 
         _uiState.update { state ->
-            when {
-                state.isMiniTranslatorOpen -> state
-                state.isClipboardSuggestionOpen -> state
-                normalized == lastClipboardPromptText -> state
-                normalized == state.sourceText.trim() -> state
-                else -> {
+            if (
+                ClipboardQuickTranslatePolicy.shouldOffer(
+                    normalizedText = normalized,
+                    lastPromptText = lastClipboardPromptText,
+                    currentSourceText = state.sourceText,
+                    isMiniTranslatorOpen = state.isMiniTranslatorOpen,
+                    isClipboardSuggestionOpen = state.isClipboardSuggestionOpen,
+                )
+            ) {
                     lastClipboardPromptText = normalized
                     state.copy(
                         isClipboardSuggestionOpen = true,
@@ -249,7 +265,8 @@ class TranslateViewModel(
                         errorMessage = null,
                         infoMessage = null,
                     )
-                }
+            } else {
+                state
             }
         }
     }
@@ -260,7 +277,7 @@ class TranslateViewModel(
             dismissClipboardQuickTranslate()
             return
         }
-        openMiniTranslator(text, sourceLabel = "剪贴板")
+        openMiniTranslator(text, sourceLabel = "剪贴板", autoTranslate = true)
     }
 
     fun dismissClipboardQuickTranslate() {
@@ -283,6 +300,7 @@ class TranslateViewModel(
             _uiState.update {
                 it.copy(
                     isMiniTranslating = true,
+                    shouldAutoTranslateMini = false,
                     miniErrorMessage = null,
                     miniInfoMessage = null,
                 )
@@ -317,6 +335,10 @@ class TranslateViewModel(
                 }
             }
         }
+    }
+
+    fun consumeMiniAutoTranslateRequest() {
+        _uiState.update { it.copy(shouldAutoTranslateMini = false) }
     }
 
     fun openFullTranslateFromMini() {
@@ -524,6 +546,53 @@ class TranslateViewModel(
                             availableModels = emptyList(),
                             isFetchingModels = false,
                             modelFetchError = error.message ?: "获取模型失败，请检查配置",
+                        )
+                    }
+                }
+        }
+    }
+
+    fun checkAppUpdate() {
+        if (_uiState.value.isCheckingAppUpdate) return
+
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    isCheckingAppUpdate = true,
+                    availableAppUpdate = null,
+                    appUpdateMessage = null,
+                    appUpdateError = null,
+                )
+            }
+
+            runCatching { repository.checkAppUpdate(currentVersionCode) }
+                .onSuccess { result ->
+                    _uiState.update { state ->
+                        when (result) {
+                            is AppUpdateCheckResult.Available -> state.copy(
+                                isCheckingAppUpdate = false,
+                                availableAppUpdate = result.release,
+                                appUpdateMessage = "发现新版本 ${result.release.versionName}",
+                            )
+                            is AppUpdateCheckResult.PackageUnavailable -> state.copy(
+                                isCheckingAppUpdate = false,
+                                availableAppUpdate = null,
+                                appUpdateMessage = "更新清单已连接，但安装包还没有发布",
+                            )
+                            is AppUpdateCheckResult.UpToDate -> state.copy(
+                                isCheckingAppUpdate = false,
+                                availableAppUpdate = null,
+                                appUpdateMessage = "当前已是最新版本 ${result.latestVersionName}",
+                            )
+                        }
+                    }
+                }
+                .onFailure { error ->
+                    _uiState.update {
+                        it.copy(
+                            isCheckingAppUpdate = false,
+                            availableAppUpdate = null,
+                            appUpdateError = error.message ?: "检查更新失败，请稍后重试",
                         )
                     }
                 }

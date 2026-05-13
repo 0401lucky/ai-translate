@@ -8,6 +8,7 @@ import com.mxwis.aitranslate.data.settings.SettingsStore
 import com.mxwis.aitranslate.data.translation.CloudTranslationEngine
 import com.mxwis.aitranslate.data.translation.OfflineTranslationEngine
 import com.mxwis.aitranslate.data.translation.TranslationRepository
+import com.mxwis.aitranslate.data.update.AppUpdateManager
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 
@@ -35,5 +36,6 @@ class AppContainer(context: Context) {
         modelManager = modelManager,
         cloudEngine = CloudTranslationEngine(httpClient),
         offlineEngine = OfflineTranslationEngine(modelManager),
+        appUpdateManager = AppUpdateManager(httpClient),
     )
 }
