@@ -59,7 +59,7 @@ app/build/outputs/apk/debug/app-debug.apk
 
 - 文件名：`HY-MT1.5-1.8B-Q4_K_M.gguf`
 - 体积：约 1.13GB
-- 下载源：Cloudflare R2 分片下载，原始模型来自 `tencent/HY-MT1.5-1.8B-GGUF`
+- 下载源：Cloudflare R2 分片下载，正式域名为 `https://download.204152.xyz`，原始模型来自 `tencent/HY-MT1.5-1.8B-GGUF`
 - 真机验证 SHA256：`4383AC0C3C8E476DE98FF979C2A3F069F8C4FB385E7860CF2D28DA896CC477C7`
 
 大模型文件不内置进 APK，采用首次下载到 App 私有目录的方案。当前实现会从 R2 下载 6 个分片，拼接为完整 GGUF 后校验文件大小和 SHA256，再保存到 App 私有目录的 `models/` 子目录。

@@ -114,7 +114,7 @@ class HyMtModelManager(
 
     companion object {
         const val MODEL_FILE_NAME = "HY-MT1.5-1.8B-Q4_K_M.gguf"
-        private const val MODEL_BASE_URL = "https://pub-e16b86eab02f4594aaa4fd358cf6151e.r2.dev"
+        private const val MODEL_BASE_URL = "https://download.204152.xyz"
         const val EXPECTED_MODEL_BYTES = 1_133_080_512L
         const val MIN_VALID_MODEL_BYTES = 1_000L * 1024L * 1024L
         const val EXPECTED_MODEL_SHA256 =

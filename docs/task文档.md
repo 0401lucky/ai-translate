@@ -613,3 +613,36 @@
 - `.\gradlew.bat :app:compileDebugKotlin --no-daemon --console=plain`：通过。
 - `.\gradlew.bat testDebugUnitTest --no-daemon --console=plain`：命令超过 60 秒上限；测试结果 XML 已生成，4 个测试类共 18 个测试均为 0 failure / 0 error。
 - 待绑定自定义域名后，将临时 R2 dev URL 替换为正式下载域名。
+
+## Task 019：绑定 R2 正式下载域名
+
+### 目标
+
+将 R2 临时 `r2.dev` 下载地址切换为正式自定义域名 `download.204152.xyz`，用于 App 更新包和离线模型分片分发。
+
+### 范围
+
+- 查询 `204152.xyz` 在 Cloudflare 中的 Zone ID。
+- 将 `download.204152.xyz` 绑定到 R2 bucket `ai-translate-assets`。
+- 更新 App 里的模型分片基础地址。
+- 更新 `docs/r2/models.json` 中的公开下载地址。
+- 上传更新后的 `models.json` 到 R2。
+- 验证自定义域名下 manifest、分片 HEAD 和 Range 请求可访问。
+
+### 完成标准
+
+- `download.204152.xyz` 绑定成功。
+- App 模型下载地址不再使用临时 `r2.dev` 地址。
+- R2 manifest 中模型分片 URL 指向正式域名。
+- 公开访问验证通过。
+- Kotlin 编译通过。
+
+### 验证记录
+
+- `204152.xyz` Zone ID：`fe23f737002048c62ab39874b2b03222`。
+- 已绑定 R2 自定义域名：`https://download.204152.xyz`。
+- R2 域名状态：`ownership_status = active`，`ssl_status = active`，`min_tls_version = 1.2`。
+- 已将 App 模型下载基础地址改为 `https://download.204152.xyz`。
+- 已更新并上传 R2 `models/models.json`，分片 URL 均指向正式域名。
+- 正式域名访问验证通过：manifest GET 返回 200，6 个模型分片 HEAD 返回 200，`part00` Range 请求返回 206。
+- `.\gradlew.bat :app:compileDebugKotlin --no-daemon --console=plain`：通过。

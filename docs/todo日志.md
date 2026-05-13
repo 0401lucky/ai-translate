@@ -241,4 +241,16 @@
 - [x] Kotlin 编译通过：`.\gradlew.bat :app:compileDebugKotlin --no-daemon --console=plain`。
 - [x] 单元测试结果 XML 通过：18 个测试均为 0 failure / 0 error；命令本身超过 60 秒上限后被停止。
 - [x] 回写验证结果到 Task 文档。
-- [ ] 选择并绑定正式自定义域名，替换临时 R2 dev URL。
+- [x] 选择并绑定正式自定义域名，替换临时 R2 dev URL。
+
+## 2026-05-13：绑定 R2 正式下载域名
+
+- [x] 明确正式下载域名：`download.204152.xyz`。
+- [x] 更新 `docs/task文档.md`，新增 Task 019。
+- [x] 查询 `204152.xyz` Zone ID：`fe23f737002048c62ab39874b2b03222`。
+- [x] 绑定 `download.204152.xyz` 到 R2 bucket。
+- [x] 更新 App 模型下载基础地址。
+- [x] 更新并上传 R2 `models.json`。
+- [x] 验证正式域名公开访问：manifest 200，分片 HEAD 200，Range 206。
+- [x] 运行 Kotlin 编译验证。
+- [x] 回写验证结果到 Task 文档。
