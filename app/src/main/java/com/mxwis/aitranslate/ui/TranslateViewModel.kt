@@ -66,6 +66,10 @@ data class TranslateUiState(
     val clipboardCandidateText: String = "",
     val isCheckingAppUpdate: Boolean = false,
     val availableAppUpdate: AppUpdateRelease? = null,
+    val isDownloadingAppUpdate: Boolean = false,
+    val appUpdateDownloadProgress: Float = 0f,
+    val downloadedAppUpdatePath: String? = null,
+    val pendingAppUpdateInstallPath: String? = null,
     val appUpdateMessage: String? = null,
     val appUpdateError: String? = null,
     val errorMessage: String? = null,
@@ -560,6 +564,8 @@ class TranslateViewModel(
                 it.copy(
                     isCheckingAppUpdate = true,
                     availableAppUpdate = null,
+                    downloadedAppUpdatePath = null,
+                    pendingAppUpdateInstallPath = null,
                     appUpdateMessage = null,
                     appUpdateError = null,
                 )
@@ -597,6 +603,70 @@ class TranslateViewModel(
                     }
                 }
         }
+    }
+
+    fun downloadAppUpdate() {
+        val release = _uiState.value.availableAppUpdate
+        if (release == null) {
+            _uiState.update { it.copy(appUpdateError = "请先检查更新") }
+            return
+        }
+        if (_uiState.value.isDownloadingAppUpdate) return
+
+        val downloadedPath = _uiState.value.downloadedAppUpdatePath
+        if (downloadedPath != null) {
+            _uiState.update { it.copy(pendingAppUpdateInstallPath = downloadedPath) }
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    isDownloadingAppUpdate = true,
+                    appUpdateDownloadProgress = 0f,
+                    appUpdateMessage = "正在下载更新包",
+                    appUpdateError = null,
+                )
+            }
+
+            runCatching {
+                repository.downloadAppUpdate(release) { downloadedBytes, totalBytes ->
+                    _uiState.update {
+                        it.copy(
+                            appUpdateDownloadProgress = if (totalBytes > 0L) {
+                                (downloadedBytes.toFloat() / totalBytes.toFloat()).coerceIn(0f, 1f)
+                            } else {
+                                0f
+                            },
+                        )
+                    }
+                }
+            }.onSuccess { file ->
+                _uiState.update {
+                    it.copy(
+                        isDownloadingAppUpdate = false,
+                        appUpdateDownloadProgress = 1f,
+                        downloadedAppUpdatePath = file.absolutePath,
+                        pendingAppUpdateInstallPath = file.absolutePath,
+                        appUpdateMessage = "更新包已下载并校验，准备安装",
+                    )
+                }
+            }.onFailure { error ->
+                _uiState.update {
+                    it.copy(
+                        isDownloadingAppUpdate = false,
+                        appUpdateDownloadProgress = 0f,
+                        downloadedAppUpdatePath = null,
+                        pendingAppUpdateInstallPath = null,
+                        appUpdateError = error.message ?: "更新包下载失败",
+                    )
+                }
+            }
+        }
+    }
+
+    fun consumeAppUpdateInstallRequest() {
+        _uiState.update { it.copy(pendingAppUpdateInstallPath = null) }
     }
 
     fun downloadModel() {

@@ -3,6 +3,7 @@ package com.mxwis.aitranslate.ui
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.provider.Settings
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
@@ -91,6 +92,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.core.content.FileProvider
 import com.mxwis.aitranslate.BuildConfig
 import com.mxwis.aitranslate.R
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -104,6 +106,7 @@ import com.mxwis.aitranslate.domain.Languages
 import com.mxwis.aitranslate.domain.TranslationMode
 import com.mxwis.aitranslate.overlay.FloatingTranslateService
 import com.mxwis.aitranslate.ui.theme.AiTranslateTheme
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -150,6 +153,8 @@ fun AiTranslateApp(viewModel: TranslateViewModel) {
             onAcceptClipboardQuickTranslate = viewModel::acceptClipboardQuickTranslate,
             onDismissClipboardQuickTranslate = viewModel::dismissClipboardQuickTranslate,
             onCheckAppUpdate = viewModel::checkAppUpdate,
+            onDownloadAppUpdate = viewModel::downloadAppUpdate,
+            onConsumeAppUpdateInstallRequest = viewModel::consumeAppUpdateInstallRequest,
         )
     }
 }
@@ -193,6 +198,8 @@ private fun AiTranslateContent(
     onAcceptClipboardQuickTranslate: () -> Unit,
     onDismissClipboardQuickTranslate: () -> Unit,
     onCheckAppUpdate: () -> Unit,
+    onDownloadAppUpdate: () -> Unit,
+    onConsumeAppUpdateInstallRequest: () -> Unit,
 ) {
     val clipboard = LocalClipboardManager.current
     val context = LocalContext.current
@@ -258,8 +265,16 @@ private fun AiTranslateContent(
                     onDefaultModeChanged = onDefaultModeChanged,
                     onClearHistory = onClearHistory,
                     onCheckAppUpdate = onCheckAppUpdate,
+                    onDownloadAppUpdate = onDownloadAppUpdate,
                 )
             }
+        }
+    }
+
+    state.pendingAppUpdateInstallPath?.let { apkPath ->
+        LaunchedEffect(apkPath) {
+            installAppUpdate(context, apkPath)
+            onConsumeAppUpdateInstallRequest()
         }
     }
 
@@ -1519,6 +1534,7 @@ private fun SettingsScreen(
     onDefaultModeChanged: (TranslationMode) -> Unit,
     onClearHistory: () -> Unit,
     onCheckAppUpdate: () -> Unit,
+    onDownloadAppUpdate: () -> Unit,
 ) {
     var showProviderSheet by remember { mutableStateOf(false) }
     val context = LocalContext.current
@@ -1742,6 +1758,12 @@ private fun SettingsScreen(
                 if (state.isCheckingAppUpdate) {
                     LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                 }
+                if (state.isDownloadingAppUpdate) {
+                    LinearProgressIndicator(
+                        progress = { state.appUpdateDownloadProgress },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
                 if (state.appUpdateError != null || state.appUpdateMessage != null) {
                     MessageBanner(
                         error = state.appUpdateError,
@@ -1766,13 +1788,19 @@ private fun SettingsScreen(
                         )
                     }
                     Button(
-                        onClick = { openExternalUrl(context, release.apkUrl) },
-                        enabled = release.apkUrl.isNotBlank(),
+                        onClick = onDownloadAppUpdate,
+                        enabled = release.apkUrl.isNotBlank() && !state.isDownloadingAppUpdate,
                         shape = RoundedCornerShape(8.dp),
                     ) {
                         Icon(Icons.Default.Download, contentDescription = null)
                         Spacer(Modifier.width(6.dp))
-                        Text("下载更新")
+                        Text(
+                            when {
+                                state.isDownloadingAppUpdate -> "正在下载"
+                                state.downloadedAppUpdatePath != null -> "安装更新"
+                                else -> "下载并安装"
+                            },
+                        )
                     }
                 }
                 SettingsStaticRow("开源与许可", "正式发布前补充 Hy-MT License")
@@ -1803,24 +1831,44 @@ private fun openOverlayPermissionSettings(context: Context) {
     context.startActivity(intent)
 }
 
-private fun openExternalUrl(context: Context, url: String) {
-    val trimmedUrl = url.trim()
-    if (trimmedUrl.isBlank()) {
-        Toast.makeText(context, "更新包地址为空", Toast.LENGTH_SHORT).show()
+private fun installAppUpdate(context: Context, apkPath: String) {
+    val apkFile = File(apkPath)
+    if (!apkFile.exists()) {
+        Toast.makeText(context, "更新包不存在，请重新下载", Toast.LENGTH_SHORT).show()
         return
     }
 
-    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(trimmedUrl))
-        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !context.packageManager.canRequestPackageInstalls()) {
+        val intent = Intent(
+            Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+            Uri.parse("package:${context.packageName}"),
+        ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        runCatching { context.startActivity(intent) }
+            .onFailure {
+                Toast.makeText(context, "请在系统设置中允许安装未知应用", Toast.LENGTH_SHORT).show()
+            }
+        return
+    }
+
+    val uri = FileProvider.getUriForFile(
+        context,
+        "${context.packageName}.fileprovider",
+        apkFile,
+    )
+    val intent = Intent(Intent.ACTION_VIEW)
+        .setDataAndType(uri, "application/vnd.android.package-archive")
+        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
     runCatching { context.startActivity(intent) }
         .onFailure {
-            Toast.makeText(context, "无法打开更新下载链接", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "无法打开系统安装器", Toast.LENGTH_SHORT).show()
         }
 }
 
 private fun appUpdateStatusText(state: TranslateUiState): String {
     return when {
         state.isCheckingAppUpdate -> "正在检查 R2 更新清单"
+        state.isDownloadingAppUpdate -> "正在下载更新包"
+        state.downloadedAppUpdatePath != null -> "更新包已下载，可继续安装"
         state.availableAppUpdate != null -> "发现 ${state.availableAppUpdate.versionName}，可下载更新"
         state.appUpdateError != null -> state.appUpdateError
         state.appUpdateMessage != null -> state.appUpdateMessage

@@ -9,9 +9,11 @@ import com.mxwis.aitranslate.data.settings.CloudProviderSettings
 import com.mxwis.aitranslate.data.settings.SettingsStore
 import com.mxwis.aitranslate.data.update.AppUpdateCheckResult
 import com.mxwis.aitranslate.data.update.AppUpdateManager
+import com.mxwis.aitranslate.data.update.AppUpdateRelease
 import com.mxwis.aitranslate.domain.TranslateOutput
 import com.mxwis.aitranslate.domain.TranslateRequest
 import com.mxwis.aitranslate.domain.TranslationMode
+import java.io.File
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 
@@ -30,6 +32,10 @@ interface TranslationRepositoryContract {
     suspend fun updateDefaultMode(value: TranslationMode)
     suspend fun fetchCloudModels(settings: AppSettings): List<String>
     suspend fun checkAppUpdate(currentVersionCode: Int): AppUpdateCheckResult
+    suspend fun downloadAppUpdate(
+        release: AppUpdateRelease,
+        onProgress: (downloadedBytes: Long, totalBytes: Long) -> Unit,
+    ): File
     suspend fun translate(request: TranslateRequest, mode: TranslationMode): TranslateOutput
     suspend fun downloadModel()
     suspend fun deleteModel()
@@ -62,6 +68,12 @@ class TranslationRepository(
     override suspend fun fetchCloudModels(settings: AppSettings): List<String> = cloudEngine.fetchModels(settings)
     override suspend fun checkAppUpdate(currentVersionCode: Int): AppUpdateCheckResult {
         return appUpdateManager.checkForUpdate(currentVersionCode)
+    }
+    override suspend fun downloadAppUpdate(
+        release: AppUpdateRelease,
+        onProgress: (downloadedBytes: Long, totalBytes: Long) -> Unit,
+    ): File {
+        return appUpdateManager.downloadUpdate(release, onProgress)
     }
 
     override suspend fun translate(request: TranslateRequest, mode: TranslationMode): TranslateOutput {

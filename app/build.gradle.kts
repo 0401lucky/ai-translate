@@ -8,12 +8,18 @@ android {
     namespace = "com.mxwis.aitranslate"
     compileSdk = 36
 
+    val resolvedVersionCode = providers.gradleProperty("appVersionCode")
+        .map(String::toInt)
+        .getOrElse(2)
+    val resolvedVersionName = providers.gradleProperty("appVersionName")
+        .getOrElse("1.0.1")
+
     defaultConfig {
         applicationId = "com.mxwis.aitranslate"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = resolvedVersionCode
+        versionName = resolvedVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

@@ -14,8 +14,8 @@ AI Translate 是一个 Android 原生大模型翻译 App，主线能力是“云
 - 历史记录：使用 Room 保存翻译历史，列表折叠预览，点击后查看完整详情。
 - 系统划词与分享：注册 `ACTION_PROCESS_TEXT` 和 `ACTION_SEND`，可从其他 App 把文本带入中央快速翻译卡片。
 - 剪贴板快捷翻译：App 打开或回到前台时检测剪贴板文本，用户确认后打开中央快速翻译卡片并自动翻译。
-- 悬浮球翻译：设置页可引导授权悬浮窗，开启悬浮球后点击读取剪贴板并显示居中的悬浮迷你翻译窗。
-- 应用内更新：设置页可检查 R2 `releases/latest.json`，发现新版本后提供下载入口。
+- 悬浮球翻译：设置页可引导授权悬浮窗，开启悬浮球后通过透明前台桥接页读取剪贴板，并显示居中的悬浮迷你翻译窗。
+- 应用内更新：设置页可检查 R2 `releases/latest.json`，发现新版本后下载 APK、校验大小和 SHA256，并拉起系统安装器。
 - 本地图标：供应商和模型标识使用 Lobe Icons 静态 PNG 资源，未匹配模型保留文字兜底。
 
 ## 技术栈
@@ -65,12 +65,30 @@ app/build/outputs/apk/debug/app-debug.apk
 
 大模型文件不内置进 APK，采用首次下载到 App 私有目录的方案。当前实现会从 R2 下载 6 个分片，拼接为完整 GGUF 后校验文件大小和 SHA256，再保存到 App 私有目录的 `models/` 子目录。
 
+## 应用更新说明
+
+应用内更新同样走 Cloudflare R2：
+
+- Bucket：`ai-translate-assets`
+- 正式域名：`https://download.204152.xyz`
+- 更新清单：`https://download.204152.xyz/releases/latest.json`
+- Debug 测试包示例：`https://download.204152.xyz/releases/ai-translate-1.0.1-debug.apk`
+
+后续 Debug 测试发版可执行：
+
+```powershell
+.\scripts\publish-r2-debug-update.ps1
+```
+
+脚本会构建 Debug APK、计算大小和 SHA256、更新 `docs/r2/latest.json`，并用 Wrangler 上传 APK 与 manifest 到 R2。正式发布前需要配置 release keystore，随后沿用同一套 R2 manifest 结构。
+
 ## 权限与系统入口
 
 App 当前声明以下关键权限和入口：
 
-- `INTERNET`：云端翻译、模型列表获取、离线模型下载和应用更新检查。
+- `INTERNET`：云端翻译、模型列表获取、离线模型下载和应用更新检查/下载。
 - `SYSTEM_ALERT_WINDOW`：用户授权后显示悬浮球和悬浮迷你翻译窗。
+- `REQUEST_INSTALL_PACKAGES`：应用内更新下载完成后拉起系统安装器。
 - `ACTION_PROCESS_TEXT`：接收系统划词文本。
 - `ACTION_SEND` + `text/plain`：接收其他 App 分享的文本。
 
@@ -101,7 +119,7 @@ docs/
 
 - `testDebugUnitTest`：最近任务记录中通过。
 - `assembleDebug`：最近任务记录中通过。
-- R2 更新清单：`https://download.204152.xyz/releases/latest.json` 当前可访问；正式 APK 地址仍需发布签名包后写入清单。
+- R2 更新清单：`https://download.204152.xyz/releases/latest.json` 当前可访问；1.0.1 Debug 更新包由 `scripts/publish-r2-debug-update.ps1` 上传。
 - Q4_K_M 离线翻译：已在真机验证，`hi` 可翻译为 `嗨`。
 - 系统划词/分享、剪贴板提示、悬浮球：代码与构建产物已就绪；部分真机交互项在最近日志中仍标记为待设备连接后补充。
 

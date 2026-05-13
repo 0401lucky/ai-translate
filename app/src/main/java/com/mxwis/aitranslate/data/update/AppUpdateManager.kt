@@ -1,10 +1,13 @@
 package com.mxwis.aitranslate.data.update
 
+import android.content.Context
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
+import java.io.File
+import java.security.MessageDigest
 
 data class AppUpdateRelease(
     val versionCode: Int,
@@ -23,8 +26,11 @@ sealed class AppUpdateCheckResult {
 }
 
 class AppUpdateManager(
+    context: Context,
     private val client: OkHttpClient,
 ) {
+    private val updateDir = File(context.cacheDir, "updates")
+
     suspend fun checkForUpdate(currentVersionCode: Int): AppUpdateCheckResult = withContext(Dispatchers.IO) {
         val request = Request.Builder().url(RELEASE_MANIFEST_URL).build()
         client.newCall(request).execute().use { response ->
@@ -39,6 +45,55 @@ class AppUpdateManager(
                 release.apkUrl.isBlank() -> AppUpdateCheckResult.PackageUnavailable(release)
                 else -> AppUpdateCheckResult.Available(release)
             }
+        }
+    }
+
+    suspend fun downloadUpdate(
+        release: AppUpdateRelease,
+        onProgress: (downloadedBytes: Long, totalBytes: Long) -> Unit,
+    ): File = withContext(Dispatchers.IO) {
+        require(release.apkUrl.isNotBlank()) { "更新包地址为空" }
+        updateDir.mkdirs()
+        val outputFile = File(updateDir, "ai-translate-${release.versionName}-debug.apk")
+        val tempFile = File(updateDir, "${outputFile.name}.part")
+
+        runCatching {
+            val request = Request.Builder().url(release.apkUrl).build()
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    error("更新包下载失败：HTTP ${response.code}")
+                }
+                val body = response.body ?: error("更新包下载失败：响应为空")
+                val totalBytes = release.sizeBytes.takeIf { it > 0L } ?: body.contentLength().coerceAtLeast(0L)
+                var downloadedBytes = 0L
+                tempFile.outputStream().use { output ->
+                    body.byteStream().use { input ->
+                        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                        while (true) {
+                            val read = input.read(buffer)
+                            if (read == -1) break
+                            output.write(buffer, 0, read)
+                            downloadedBytes += read
+                            onProgress(downloadedBytes, totalBytes)
+                        }
+                    }
+                }
+            }
+
+            if (release.sizeBytes > 0L && tempFile.length() != release.sizeBytes) {
+                error("更新包大小校验失败")
+            }
+            if (release.sha256.isNotBlank() && !tempFile.sha256().equals(release.sha256, ignoreCase = true)) {
+                error("更新包 SHA256 校验失败")
+            }
+
+            if (outputFile.exists()) outputFile.delete()
+            check(tempFile.renameTo(outputFile)) { "更新包保存失败" }
+            onProgress(outputFile.length(), release.sizeBytes.takeIf { it > 0L } ?: outputFile.length())
+            outputFile
+        }.getOrElse { error ->
+            tempFile.delete()
+            throw error
         }
     }
 
@@ -68,4 +123,17 @@ class AppUpdateManager(
             )
         }
     }
+}
+
+private fun File.sha256(): String {
+    val digest = MessageDigest.getInstance("SHA-256")
+    inputStream().use { input ->
+        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+        while (true) {
+            val read = input.read(buffer)
+            if (read == -1) break
+            digest.update(buffer, 0, read)
+        }
+    }
+    return digest.digest().joinToString("") { "%02X".format(it) }
 }

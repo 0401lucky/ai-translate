@@ -1,15 +1,16 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-05-12T22:53:43+08:00",
+  "updatedAt": "2026-05-13T11:41:44+08:00",
   "android": {
-    "versionCode": 1,
-    "versionName": "1.0.0",
+    "versionCode": 2,
+    "versionName": "1.0.1",
     "required": false,
-    "apkUrl": "",
-    "sha256": "",
-    "sizeBytes": 0,
+    "apkUrl": "https://download.204152.xyz/releases/ai-translate-1.0.1-debug.apk",
+    "sha256": "A17F9D33136302292BF1A46FA008F853FAC010362B0B54C89CE94E2FDAE2C98E",
+    "sizeBytes": 142340788,
     "notes": [
-      "R2 update manifest placeholder. Upload a signed release APK before enabling in-app update checks."
+      "修复悬浮球在其他 App 中无法稳定读取剪贴板的问题。",
+      "应用内更新支持下载 APK、校验大小和 SHA256，并拉起系统安装器。"
     ]
   }
 }

@@ -2,7 +2,6 @@ package com.mxwis.aitranslate.overlay
 
 import android.app.Service
 import android.content.ClipData
-import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.Intent
 import android.graphics.Color
@@ -58,6 +57,10 @@ class FloatingTranslateService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_HIDE -> stopSelf()
+            ACTION_TRANSLATE_CLIPBOARD_TEXT -> showPanelAndTranslate(
+                clipboardText = intent.getStringExtra(EXTRA_SOURCE_TEXT),
+                errorMessage = intent.getStringExtra(EXTRA_ERROR_MESSAGE),
+            )
             else -> showBubble()
         }
         return START_STICKY
@@ -110,15 +113,28 @@ class FloatingTranslateService : Service() {
             y = dp(220)
         }
 
-        bubble.setOnTouchListener(FloatingDragTouchListener(params) {
-            showPanelAndTranslate()
-        })
+        bubble.setOnTouchListener(FloatingDragTouchListener(params, ::openClipboardBridge))
 
         windowManager.addView(bubble, params)
         bubbleView = bubble
     }
 
-    private fun showPanelAndTranslate() {
+    private fun openClipboardBridge() {
+        val intent = Intent(this, ClipboardBridgeActivity::class.java)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
+        runCatching { startActivity(intent) }
+            .onFailure {
+                showPanelAndTranslate(
+                    clipboardText = null,
+                    errorMessage = "无法打开剪贴板读取入口，请回到 App 内使用剪贴板快捷翻译。",
+                )
+            }
+    }
+
+    private fun showPanelAndTranslate(
+        clipboardText: String?,
+        errorMessage: String? = null,
+    ) {
         if (!Settings.canDrawOverlays(this)) {
             Toast.makeText(this, "悬浮窗权限已关闭", Toast.LENGTH_SHORT).show()
             stopSelf()
@@ -184,6 +200,8 @@ class FloatingTranslateService : Service() {
         panelView = panel
         panel.post {
             translateClipboard(
+                providedText = clipboardText,
+                clipboardError = errorMessage,
                 sourceTextView = sourceText,
                 statusTextView = statusText,
                 resultTextView = resultText,
@@ -195,6 +213,8 @@ class FloatingTranslateService : Service() {
     }
 
     private fun translateClipboard(
+        providedText: String?,
+        clipboardError: String?,
         sourceTextView: TextView,
         statusTextView: TextView,
         resultTextView: TextView,
@@ -202,10 +222,10 @@ class FloatingTranslateService : Service() {
         resultSpeakButton: Button,
         copyButton: Button,
     ) {
-        val clipboardText = readClipboardText()
+        val clipboardText = ExternalTextInput.extractClipboardText(providedText)
         if (clipboardText == null) {
             sourceTextView.text = "剪贴板为空或系统限制读取"
-            statusTextView.text = "请复制文本后再点悬浮球；若仍失败，请回到 App 内使用剪贴板快捷翻译。"
+            statusTextView.text = clipboardError ?: "请复制文本后再点悬浮球；若仍失败，请回到 App 内使用剪贴板快捷翻译。"
             resultTextView.text = "暂无译文"
             resultTextView.setTextColor(SUB_TEXT)
             return
@@ -250,19 +270,6 @@ class FloatingTranslateService : Service() {
                 resultTextView.setTextColor(SUB_TEXT)
             }
         }
-    }
-
-    private fun readClipboardText(): String? {
-        return runCatching {
-            val clipboard = getSystemService(ClipboardManager::class.java)
-            val description = clipboard.primaryClipDescription ?: return null
-            val isText = description.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN) ||
-                description.hasMimeType(ClipDescription.MIMETYPE_TEXT_HTML)
-            if (!isText) return null
-
-            val clip = clipboard.primaryClip?.takeIf { it.itemCount > 0 } ?: return null
-            ExternalTextInput.extractClipboardText(clip.getItemAt(0).coerceToText(this))
-        }.getOrNull()
     }
 
     private fun speakText(text: String, language: LanguageOption) {
@@ -421,6 +428,9 @@ class FloatingTranslateService : Service() {
     companion object {
         const val ACTION_SHOW = "com.mxwis.aitranslate.overlay.SHOW"
         const val ACTION_HIDE = "com.mxwis.aitranslate.overlay.HIDE"
+        const val ACTION_TRANSLATE_CLIPBOARD_TEXT = "com.mxwis.aitranslate.overlay.TRANSLATE_CLIPBOARD_TEXT"
+        const val EXTRA_SOURCE_TEXT = "com.mxwis.aitranslate.overlay.extra.SOURCE_TEXT"
+        const val EXTRA_ERROR_MESSAGE = "com.mxwis.aitranslate.overlay.extra.ERROR_MESSAGE"
         private const val PRIMARY_BLUE = 0xFF2563EB.toInt()
         private const val BODY_TEXT = 0xFF0F172A.toInt()
         private const val SUB_TEXT = 0xFF64748B.toInt()

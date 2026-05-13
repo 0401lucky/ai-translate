@@ -36,6 +36,6 @@ class AppContainer(context: Context) {
         modelManager = modelManager,
         cloudEngine = CloudTranslationEngine(httpClient),
         offlineEngine = OfflineTranslationEngine(modelManager),
-        appUpdateManager = AppUpdateManager(httpClient),
+        appUpdateManager = AppUpdateManager(appContext, httpClient),
     )
 }

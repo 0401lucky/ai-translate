@@ -728,3 +728,49 @@
 - `.\gradlew.bat testDebugUnitTest --no-daemon --console=plain`：通过。
 - `.\gradlew.bat assembleDebug --no-daemon --console=plain`：通过。
 - 当前未连接真机，设置页点击检查更新的设备侧交互验证待补充。
+
+## Task 022：1.0.1 悬浮剪贴板修复与 R2 内置更新
+
+### 目标
+
+修复 Android 10+ 下悬浮球在其他 App 中无法稳定读取剪贴板的问题，并把本次优化作为 `1.0.1` 通过 Cloudflare R2 发布，验证应用内更新下载安装流程。
+
+### 范围
+
+- 新增透明剪贴板桥接 Activity，让悬浮球点击后以前台 Activity 身份读取剪贴板。
+- 悬浮翻译 Service 接收桥接 Activity 传入的文本并直接翻译，不再依赖后台 Service 读取剪贴板。
+- 将 App 版本提升为 `versionCode = 2`、`versionName = 1.0.1`。
+- 应用内更新从“打开下载链接”升级为下载 APK、校验大小和 SHA256，并拉起系统安装器。
+- 新增 FileProvider 和安装未知应用权限声明。
+- 新增 R2 Debug 发版脚本，自动构建 APK、生成 `latest.json`、上传 APK 与 manifest。
+- 更新 README、工作文档、任务文档和 TODO 日志，明确更新走 Cloudflare R2。
+
+### 不包含
+
+- 不配置正式 release keystore。
+- 不做静默安装。
+- 不做后台自动读取剪贴板或后台自动翻译。
+
+### 完成标准
+
+- 从其他 App 复制文本后，不打开主界面点击悬浮球也能读取并翻译。
+- 设置页检查更新能发现 `1.0.1`，下载 APK 后校验并拉起系统安装器。
+- R2 `releases/latest.json` 指向 `1.0.1` Debug APK。
+- GitHub `main` 已推送本次 1.0.1 改动。
+- Kotlin 编译、单元测试和 Debug APK 构建通过。
+
+### 验证记录
+
+- UI 设计图已生成并保存到 `docs/ui/v101-update-floating-clipboard-design.png`。
+- 已新增透明 `ClipboardBridgeActivity`，悬浮球点击后通过前台 Activity 读取剪贴板，并把文本传回 `FloatingTranslateService` 翻译。
+- 已将版本号提升为 `versionCode = 2`、`versionName = 1.0.1`。
+- 已实现应用内更新包下载、大小校验、SHA256 校验、FileProvider 暴露 APK 和系统安装器拉起。
+- 已新增 `scripts/publish-r2-debug-update.ps1`，用于 Debug 包 R2 发版。
+- 已执行 R2 发版脚本，上传 `releases/ai-translate-1.0.1-debug.apk` 和 `releases/latest.json`。
+- R2 manifest GET 返回 200，APK HEAD 返回 200，APK 公开大小为 `142340788` 字节。
+- R2 manifest 已写入 SHA256：`A17F9D33136302292BF1A46FA008F853FAC010362B0B54C89CE94E2FDAE2C98E`。
+- `.\gradlew.bat :app:compileDebugKotlin --no-daemon --console=plain`：通过。
+- `.\gradlew.bat testDebugUnitTest --no-daemon --console=plain`：通过。
+- `.\gradlew.bat :app:assembleDebug --no-daemon --console=plain`：通过。
+- 本次 1.0.1 改动随提交同步到 GitHub `main`。
+- 已成功构建临时 `versionCode = 1` 测试客户端；安装验证时 `adb devices` 无在线设备，悬浮剪贴板和应用内安装真机点击验证待设备重新连接后补充。

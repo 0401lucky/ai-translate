@@ -10,6 +10,7 @@ import com.mxwis.aitranslate.data.update.AppUpdateRelease
 import com.mxwis.aitranslate.domain.TranslateOutput
 import com.mxwis.aitranslate.domain.TranslateRequest
 import com.mxwis.aitranslate.domain.TranslationMode
+import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -50,6 +51,7 @@ class TranslateViewModelTest {
 
     @Test
     fun `检查应用更新发现新版本时写入下载信息`() = runTest {
+        val downloadedFile = File("build/tmp/test-update.apk")
         val repository = FakeTranslationRepository(
             appUpdateResult = AppUpdateCheckResult.Available(
                 AppUpdateRelease(
@@ -73,6 +75,36 @@ class TranslateViewModelTest {
         assertEquals("发现新版本 1.1.0", state.appUpdateMessage)
         assertEquals("https://download.204152.xyz/releases/app-release.apk", state.availableAppUpdate?.apkUrl)
     }
+
+    @Test
+    fun `下载应用更新成功后标记待安装路径`() = runTest {
+        val downloadedFile = File("build/tmp/test-update.apk")
+        val repository = FakeTranslationRepository(
+            appUpdateResult = AppUpdateCheckResult.Available(
+                AppUpdateRelease(
+                    versionCode = 2,
+                    versionName = "1.0.1",
+                    required = false,
+                    apkUrl = "https://download.204152.xyz/releases/ai-translate-1.0.1-debug.apk",
+                    sha256 = "abc",
+                    sizeBytes = 100L,
+                    notes = emptyList(),
+                ),
+            ),
+            downloadedUpdateFile = downloadedFile,
+        )
+        val viewModel = TranslateViewModel(repository, currentVersionCode = 1)
+
+        viewModel.checkAppUpdate()
+        advanceUntilIdle()
+        viewModel.downloadAppUpdate()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isDownloadingAppUpdate)
+        assertEquals(downloadedFile.absolutePath, state.downloadedAppUpdatePath)
+        assertEquals(downloadedFile.absolutePath, state.pendingAppUpdateInstallPath)
+    }
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -90,6 +122,7 @@ class MainDispatcherRule(
 
 private class FakeTranslationRepository(
     private val appUpdateResult: AppUpdateCheckResult = AppUpdateCheckResult.UpToDate("1.0.0"),
+    private val downloadedUpdateFile: File = File("build/tmp/fake-update.apk"),
 ) : TranslationRepositoryContract {
     override val settings: Flow<AppSettings> = MutableStateFlow(AppSettings())
     override val history: Flow<List<TranslationHistoryEntity>> = MutableStateFlow(emptyList())
@@ -105,6 +138,13 @@ private class FakeTranslationRepository(
     override suspend fun updateDefaultMode(value: TranslationMode) = Unit
     override suspend fun fetchCloudModels(settings: AppSettings): List<String> = emptyList()
     override suspend fun checkAppUpdate(currentVersionCode: Int): AppUpdateCheckResult = appUpdateResult
+    override suspend fun downloadAppUpdate(
+        release: AppUpdateRelease,
+        onProgress: (downloadedBytes: Long, totalBytes: Long) -> Unit,
+    ): File {
+        onProgress(release.sizeBytes, release.sizeBytes)
+        return downloadedUpdateFile
+    }
     override suspend fun translate(request: TranslateRequest, mode: TranslationMode): TranslateOutput {
         return TranslateOutput(translatedText = "你好", usedMode = mode)
     }
