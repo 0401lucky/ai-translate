@@ -859,3 +859,248 @@
 - R2 manifest GET 返回 200，APK HEAD 返回 200，APK 公开大小为 `142357364` 字节。
 - R2 manifest 已写入 SHA256：`C692F0798AAA54E0AD7D020D9C8F4F5611267CCDCBC788D03EC84295C88EDCF4`。
 - 当前 `adb devices` 无在线设备，文本朗读真机发声和 1.0.1 到 1.0.2 应用内更新点击验证待设备重新连接后补充。
+
+## Task 025：翻译页模型选择状态修复
+
+### 目标
+
+修复翻译页选择云端模型后，重启 App 界面仍显示云端模型但实际按离线模型翻译的问题，让界面展示、默认模式和真实翻译模式保持一致。
+
+### 范围
+
+- 翻译页统一模型选择时，同步保存对应的默认翻译模式。
+- 选择云端模型时继续保存具体模型名称。
+- 界面展示按当前模式派生模型名称，避免默认离线时误显示云端模型名。
+- 增加 ViewModel 单元测试覆盖云端选择持久化。
+
+### 不包含
+
+- 不新增模型选择 UI 设计。
+- 不改动云端翻译接口协议。
+- 不改动离线模型下载和推理逻辑。
+
+### 完成标准
+
+- 选择云端模型后，DataStore 默认模式同步为云端。
+- 重启 App 后会按已选择的云端模式发起翻译。
+- 默认模式为离线时，翻译页模型入口显示离线模型，而不是云端模型名。
+- Kotlin 编译和单元测试通过。
+
+### 验证记录
+
+- 已修复翻译页统一模型选择：选择云端 / 离线 / 自动时同步保存默认翻译模式。
+- 已修复模型入口展示逻辑：默认离线时显示 `HY-MT 1.5B`，不再误显示云端模型名。
+- 已增加 ViewModel 单元测试，覆盖选择云端模型后写入默认模式并按云端翻译。
+- `.\gradlew.bat :app:compileDebugKotlin --no-daemon --console=plain`：通过。
+- `.\gradlew.bat testDebugUnitTest --no-daemon --console=plain`：首次通过；追加状态刷新补丁后再次执行超过 60 秒上限被截断，但测试 XML 显示 8 个测试类共 35 个测试均为 0 failure / 0 error。
+- `.\gradlew.bat :app:testDebugUnitTest --tests "com.mxwis.aitranslate.ui.TranslateViewModelTest" --no-daemon --console=plain`：通过，耗时 54 秒。
+- `.\gradlew.bat :app:assembleDebug --no-daemon --console=plain`：通过。
+- 当前 shell 中 `adb` 不在 PATH，未补充真机重启点击验证。
+
+## Task 026：有道式翻译首页与拍照翻译首版
+
+### 目标
+
+把翻译首页改成“文字翻译主入口 + 快捷功能入口区”的有道式结构，并新增拍照翻译首版能力，支持拍照或相册导入图片后本地 OCR 识别，再复用现有翻译流程。
+
+### 范围
+
+- 更新新版首页设计图并保存到 `docs/ui/photo-translate-home-design.png`。
+- 首页保留模型选择、语言切换和文字翻译主流程。
+- 首页增加快捷入口：拍照翻译、相册导入、剪贴板、历史。
+- 新增图片翻译面板：图片预览、识别文本编辑、译文、重新选择、带入首页、复制译文。
+- 使用 Google ML Kit Text Recognition v2 本地 OCR，接入 Latin + Chinese 识别模型。
+- 更新相机临时图片 FileProvider 路径。
+
+### 不包含
+
+- 不做实时相机取景翻译。
+- 不上传图片到云端。
+- 不实现文档翻译正文能力。
+
+### 完成标准
+
+- Debug APK 能成功构建。
+- 单元测试覆盖 OCR 成功、OCR 空结果、图片文本翻译和带入首页。
+- 模拟器首页能看到有道式快捷入口。
+- 相册图片导入后能识别文字并进入图片翻译面板。
+- 图片翻译面板能翻译、复制并带入首页。
+
+### 验证记录
+
+- 已使用 imagegen 生成新版首页设计图，保存到 `docs/ui/photo-translate-home-design.png`。
+- 已接入 ML Kit Text Recognition v2，本地 OCR 同时使用 Latin 和 Chinese 识别模型，图片不上传。
+- 已新增拍照 / 相册导入入口，复用现有 `FileProvider` 并补充相机临时缓存路径。
+- 已新增图片翻译状态和底部面板，支持图片预览、识别文本编辑、翻译识别文本、复制译文、重新选择和带入首页。
+- 已增加 ViewModel 单元测试，覆盖 OCR 成功、OCR 空结果、图片翻译使用当前语言 / 模型模式、带入首页同步。
+- `.\gradlew.bat :app:compileDebugKotlin --no-daemon --console=plain`：通过。
+- `.\gradlew.bat testDebugUnitTest --no-daemon --console=plain`：通过。
+- `.\gradlew.bat :app:assembleDebug --no-daemon --console=plain`：通过。
+- 模拟器验证：`Pixel_9_Pro` 安装新版 Debug APK 成功，首页可见拍照翻译、相册导入、剪贴板、历史四个快捷入口。
+- 模拟器验证：拍照翻译入口可打开系统相机；相册导入入口可打开系统图片选择器。
+- 模拟器验证：导入测试图片后，本地 OCR 成功识别中英文文本并进入图片翻译面板；样例中文和 `AI translate` 存在轻微误识别，已可在面板内手动编辑后再翻译。
+- 验证截图已保存到 `docs/ui/prototype-screenshots/photo-translate-home-emulator-new.png`、`docs/ui/prototype-screenshots/photo-entry-after-tap.png`、`docs/ui/prototype-screenshots/gallery-entry-after-tap.png`、`docs/ui/prototype-screenshots/image-result-after-ocr.png`。
+- 当前模拟器没有配置云端 API Key，也未下载离线模型；真实模型输出在单元测试中用 fake repository 覆盖，设备侧真实翻译需配置模型后再点测。
+
+## Task 027：首页工具入口收纳优化
+
+### 目标
+
+把首页快捷功能区收纳到右上角工具入口里，减少主页面信息量，让首页优先服务文字翻译；点击工具图标后弹出工具面板，首版提供拍照翻译和相册导入，后续工具继续放入同一个入口。
+
+### 范围
+
+- 更新工具入口设计图并保存到 `docs/ui/translate-toolbox-design.png`。
+- 首页右上角新增工具按钮。
+- 移除首页直接展示的剪贴板、历史等快捷宫格。
+- 点击工具按钮后弹出工具面板，展示拍照翻译和相册导入。
+- 工具面板预留后续工具扩展说明，但不展示不可用按钮。
+
+### 不包含
+
+- 不新增文档翻译正文能力。
+- 不改动 OCR 和图片翻译业务流程。
+- 不改动底部历史导航。
+
+### 完成标准
+
+- 首页不再直接展示四宫格快捷入口。
+- 右上角工具按钮可打开工具面板。
+- 工具面板内拍照翻译、相册导入仍能触发原有流程。
+- Kotlin 编译、单元测试、Debug APK 构建通过。
+- 模拟器安装后能看到新版首页和工具弹窗。
+
+### 验证记录
+
+- 已使用 imagegen 生成工具入口设计图：`docs/ui/translate-toolbox-design.png`。
+- 已移除首页四宫格快捷入口，首页仅保留右上角工具按钮作为拍照 / 相册入口。
+- 已通过 `.\gradlew.bat :app:compileDebugKotlin --no-daemon --console=plain`。
+- 已通过 `.\gradlew.bat testDebugUnitTest --no-daemon --console=plain`。
+- 已通过 `.\gradlew.bat :app:assembleDebug --no-daemon --console=plain`。
+- 已安装新版 Debug APK 到模拟器 `emulator-5554` 并启动验证。
+- 已截图验证首页和工具弹窗：
+  - `docs/ui/prototype-screenshots/toolbox-home.png`
+  - `docs/ui/prototype-screenshots/toolbox-sheet.png`
+  - `docs/ui/prototype-screenshots/toolbox-final-visible.png`
+- 已点击验证工具入口：
+  - `相册导入` 可唤起系统照片选择器，截图：`docs/ui/prototype-screenshots/toolbox-gallery-picker.png`。
+  - `拍照翻译` 可唤起系统相机，截图：`docs/ui/prototype-screenshots/toolbox-camera-launch-2.png`。
+
+## Task 028：首页工具入口图标优化
+
+### 目标
+
+把首页右上角工具入口从九宫格图标调整为更明确的工具类图标，避免用户误解为应用菜单或功能宫格。
+
+### 范围
+
+- 更新工具入口图标优化设计图并保存到 `docs/ui/translate-tool-icon-design.png`。
+- 替换首页右上角工具入口图标。
+- 保持原有工具弹窗和拍照 / 相册入口流程不变。
+
+### 不包含
+
+- 不调整首页整体布局。
+- 不新增新的工具项。
+- 不改动 OCR 和翻译业务流程。
+
+### 完成标准
+
+- 首页右上角不再使用九宫格图标。
+- 新图标语义更接近“工具 / 辅助能力 / 快捷入口”。
+- 点击新图标仍可打开工具弹窗。
+- Kotlin 编译通过，并安装到模拟器截图验证。
+
+### 验证记录
+
+- 已使用 imagegen 生成图标优化设计图：`docs/ui/translate-tool-icon-design.png`。
+- 已将首页右上角工具入口从九宫格替换为魔法棒图标 `AutoFixHigh`。
+- 已通过 `.\gradlew.bat :app:compileDebugKotlin --no-daemon --console=plain`。
+- 已通过 `.\gradlew.bat :app:assembleDebug --no-daemon --console=plain`。
+- 已安装新版 Debug APK 到模拟器 `emulator-5554` 并启动验证。
+- 已截图验证：
+  - 首页新图标：`docs/ui/prototype-screenshots/tool-icon-home-ready.png`
+  - 新图标点击后弹出工具面板：`docs/ui/prototype-screenshots/tool-icon-final-visible.png`
+
+## Task 029：首页工具入口视觉对齐修正
+
+### 目标
+
+修正首页实际效果与设计图差异过大的问题，让翻译首页和工具弹窗更接近设计稿：白底、轻量、工具箱语义明确，避免灰脏背景和过重按钮。
+
+### 范围
+
+- 生成视觉对齐参考图并保存到 `docs/ui/translate-home-visual-alignment-design.png`。
+- 将右上角工具入口从魔法棒调整为工具箱 / 公文包语义图标。
+- 统一翻译首页背景为白底视觉，减少灰色块割裂。
+- 优化工具弹窗卡片的留白、圆角、图标块、分隔线和底部提示。
+- 保持拍照翻译、相册导入、OCR 和翻译流程不变。
+
+### 不包含
+
+- 不新增新的工具项。
+- 不重做图片翻译业务流程。
+- 不改动底部导航结构。
+
+### 完成标准
+
+- 首页实际截图与视觉参考图主要结构一致。
+- 右上角工具入口不再像装饰按钮或 AI 魔法按钮，而是明确的工具入口。
+- 工具弹窗视觉更轻，拍照翻译和相册导入仍可点击。
+- Kotlin 编译和 Debug APK 构建通过。
+- 安装到模拟器并截图验证。
+
+### 验证记录
+
+- 已使用 imagegen 生成视觉对齐参考图：`docs/ui/translate-home-visual-alignment-design.png`。
+- 已将右上角工具入口从魔法棒改为工具箱 / 公文包图标，并调整为白底细描边按钮。
+- 已将翻译首页主体背景统一为白底，输入卡和译文卡改为更轻的白色卡片。
+- 已优化工具弹窗：更大的水平留白、更轻的操作卡片、更柔和图标块和虚线分隔。
+- 已通过 `.\gradlew.bat :app:compileDebugKotlin --no-daemon --console=plain`。
+- 已通过 `.\gradlew.bat :app:assembleDebug --no-daemon --console=plain`。
+- 模拟器空间不足时，先尝试保留数据卸载仍失败，随后清理模拟器内旧应用数据后安装新版成功；不影响项目文件。
+- 已截图验证：
+  - 首页：`docs/ui/prototype-screenshots/visual-alignment-home-ready.png`
+  - 工具弹窗：`docs/ui/prototype-screenshots/visual-alignment-toolbox.png`
+  - 工具入口点击可唤起系统相机：`docs/ui/prototype-screenshots/visual-alignment-camera-launch.png`
+
+## Task 030：发布 1.0.3 内置更新包
+
+### 目标
+
+将近期模型选择修复、拍照翻译、首页工具入口和视觉修正整理为 `1.0.3` Debug 更新包，上传到 Cloudflare R2 内置更新通道，并提交推送到 GitHub。
+
+### 范围
+
+- 将默认版本提升为 `versionCode = 4`、`versionName = 1.0.3`。
+- 更新 R2 Debug 发版脚本默认版本、APK 对象路径和更新说明。
+- 运行 Kotlin 编译、单元测试、Debug APK 构建。
+- 执行 R2 发版脚本，生成并上传 `releases/ai-translate-1.0.3-debug.apk` 和 `releases/latest.json`。
+- 验证公开更新清单和 APK 可访问。
+- 提交并推送 GitHub。
+
+### 不包含
+
+- 不配置正式 release keystore。
+- 不发布 Google Play / 应用商店版本。
+- 不变更内置更新协议格式。
+
+### 完成标准
+
+- App 默认版本号为 `1.0.3 (4)`。
+- R2 `releases/latest.json` 指向 `1.0.3` Debug APK。
+- APK 大小和 SHA256 写入 manifest 并通过公开访问校验。
+- 构建和单元测试通过。
+- GitHub `main` 分支收到本次发布提交。
+
+### 验证记录
+
+- 已将默认版本号提升为 `versionCode = 4`、`versionName = 1.0.3`。
+- 已更新 `scripts/publish-r2-debug-update.ps1`，默认发布 `releases/ai-translate-1.0.3-debug.apk`。
+- 已通过 `.\gradlew.bat :app:compileDebugKotlin --no-daemon --console=plain`。
+- 已通过 `.\gradlew.bat testDebugUnitTest --no-daemon --console=plain`，耗时 49 秒。
+- 已通过 `.\gradlew.bat :app:assembleDebug --no-daemon --console=plain`。
+- 已执行 `.\scripts\publish-r2-debug-update.ps1`，上传 `releases/ai-translate-1.0.3-debug.apk` 和 `releases/latest.json`。
+- R2 manifest GET 返回 200，APK HEAD 返回 200，APK 公开大小为 `187507940` 字节。
+- R2 manifest 已写入 SHA256：`AA4A7EB54D2A7742B0AEB39D677B8916DF283977863579E7F1353FC624E529D2`。
+- 本次发布改动将提交并推送到 GitHub `main` 分支。

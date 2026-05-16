@@ -2,12 +2,25 @@ package com.mxwis.aitranslate.ui
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,15 +47,19 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.BusinessCenter
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
@@ -78,10 +95,19 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -91,6 +117,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.core.content.FileProvider
 import com.mxwis.aitranslate.BuildConfig
@@ -103,7 +130,9 @@ import com.mxwis.aitranslate.data.history.TranslationHistoryEntity
 import com.mxwis.aitranslate.data.settings.CloudProviderSettings
 import com.mxwis.aitranslate.domain.LanguageOption
 import com.mxwis.aitranslate.domain.Languages
+import com.mxwis.aitranslate.domain.ModelType
 import com.mxwis.aitranslate.domain.TranslationMode
+import com.mxwis.aitranslate.domain.UnifiedModelOption
 import com.mxwis.aitranslate.overlay.FloatingTranslateService
 import com.mxwis.aitranslate.speech.TtsRuntimeState
 import com.mxwis.aitranslate.speech.TtsSpeakResult
@@ -124,7 +153,6 @@ fun AiTranslateApp(viewModel: TranslateViewModel) {
             onSectionSelected = viewModel::selectSection,
             onSourceTextChanged = viewModel::updateSourceText,
             onClearInput = viewModel::clearInput,
-            onModeSelected = viewModel::selectMode,
             onOpenLanguagePicker = viewModel::openLanguagePicker,
             onCloseLanguagePicker = viewModel::closeLanguagePicker,
             onChooseLanguage = viewModel::chooseLanguage,
@@ -158,6 +186,15 @@ fun AiTranslateApp(viewModel: TranslateViewModel) {
             onCheckAppUpdate = viewModel::checkAppUpdate,
             onDownloadAppUpdate = viewModel::downloadAppUpdate,
             onConsumeAppUpdateInstallRequest = viewModel::consumeAppUpdateInstallRequest,
+            onOpenUnifiedModelPicker = viewModel::openUnifiedModelPicker,
+            onCloseUnifiedModelPicker = viewModel::closeUnifiedModelPicker,
+            onSelectUnifiedModel = viewModel::selectUnifiedModel,
+            onUpdateDefaultUnifiedModel = viewModel::updateDefaultUnifiedModel,
+            onOpenImageTranslator = viewModel::openImageTranslator,
+            onUpdateImageRecognizedText = viewModel::updateImageRecognizedText,
+            onTranslateImageText = viewModel::translateImageText,
+            onCloseImageTranslator = viewModel::closeImageTranslator,
+            onBringImageTranslationToHome = viewModel::bringImageTranslationToHome,
         )
     }
 }
@@ -169,7 +206,6 @@ private fun AiTranslateContent(
     onSectionSelected: (AppSection) -> Unit,
     onSourceTextChanged: (String) -> Unit,
     onClearInput: () -> Unit,
-    onModeSelected: (TranslationMode) -> Unit,
     onOpenLanguagePicker: (LanguagePickerTarget) -> Unit,
     onCloseLanguagePicker: () -> Unit,
     onChooseLanguage: (LanguageOption) -> Unit,
@@ -203,17 +239,65 @@ private fun AiTranslateContent(
     onCheckAppUpdate: () -> Unit,
     onDownloadAppUpdate: () -> Unit,
     onConsumeAppUpdateInstallRequest: () -> Unit,
+    onOpenUnifiedModelPicker: () -> Unit,
+    onCloseUnifiedModelPicker: () -> Unit,
+    onSelectUnifiedModel: (UnifiedModelOption) -> Unit,
+    onUpdateDefaultUnifiedModel: (UnifiedModelOption) -> Unit,
+    onOpenImageTranslator: (String, String) -> Unit,
+    onUpdateImageRecognizedText: (String) -> Unit,
+    onTranslateImageText: () -> Unit,
+    onCloseImageTranslator: () -> Unit,
+    onBringImageTranslationToHome: () -> Unit,
 ) {
     val clipboard = LocalClipboardManager.current
     val context = LocalContext.current
     val speaker = rememberTextSpeaker()
     val ttsState by speaker.state.collectAsStateWithLifecycle()
+    var pendingPhotoUri by remember { mutableStateOf<Uri?>(null) }
+    var isToolSheetOpen by rememberSaveable { mutableStateOf(false) }
+
+    val takePhotoLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture(),
+    ) { success ->
+        val uri = pendingPhotoUri
+        if (success && uri != null) {
+            onOpenImageTranslator(uri.toString(), "拍照翻译")
+        } else {
+            Toast.makeText(context, "未获取到照片", Toast.LENGTH_SHORT).show()
+        }
+    }
+    val pickImageLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+    ) { uri ->
+        if (uri != null) {
+            onOpenImageTranslator(uri.toString(), "相册导入")
+        }
+    }
+
+    fun launchCamera() {
+        runCatching {
+            val uri = createPhotoTranslateUri(context)
+            pendingPhotoUri = uri
+            takePhotoLauncher.launch(uri)
+        }.onFailure {
+            Toast.makeText(context, "无法打开系统相机", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun launchGallery() {
+        runCatching {
+            pickImageLauncher.launch("image/*")
+        }.onFailure {
+            Toast.makeText(context, "无法打开系统相册", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     fun speakText(text: String, language: LanguageOption) {
         showTtsSpeakResult(context, speaker.speak(text, language))
     }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
             TopAppBar(
                 title = {
@@ -221,6 +305,32 @@ private fun AiTranslateContent(
                         text = "AI 翻译",
                         fontWeight = FontWeight.Bold,
                     )
+                },
+                actions = {
+                    if (state.currentSection == AppSection.TRANSLATE) {
+                        Surface(
+                            onClick = { isToolSheetOpen = true },
+                            modifier = Modifier
+                                .padding(end = 14.dp)
+                                .size(42.dp),
+                            shape = RoundedCornerShape(14.dp),
+                            color = MaterialTheme.colorScheme.surface,
+                            contentColor = MaterialTheme.colorScheme.onSurface,
+                            border = BorderStroke(
+                                1.dp,
+                                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.72f),
+                            ),
+                            shadowElevation = 0.dp,
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.BusinessCenter,
+                                    contentDescription = "打开工具",
+                                    modifier = Modifier.size(21.dp),
+                                )
+                            }
+                        }
+                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,
@@ -244,23 +354,18 @@ private fun AiTranslateContent(
                     state = state,
                     onSourceTextChanged = onSourceTextChanged,
                     onClearInput = onClearInput,
-                    onModeSelected = onModeSelected,
                     onOpenLanguagePicker = onOpenLanguagePicker,
                     onSwapLanguages = onSwapLanguages,
                     onTranslate = onTranslate,
                     onSpeakSource = { speakText(state.sourceText, state.sourceLanguage) },
                     onSpeakTranslation = { speakText(state.translatedText, state.targetLanguage) },
+                    onOpenUnifiedModelPicker = onOpenUnifiedModelPicker,
                 )
                 AppSection.HISTORY -> HistoryScreen(
                     histories = state.histories,
                     onDeleteHistory = onDeleteHistory,
                     onClearHistory = onClearHistory,
                     onOpenHistoryDetail = onOpenHistoryDetail,
-                )
-                AppSection.MODEL -> ModelScreen(
-                    state = state,
-                    onDownloadModel = onDownloadModel,
-                    onDeleteModel = onDeleteModel,
                 )
                 AppSection.SETTINGS -> SettingsScreen(
                     state = state,
@@ -270,8 +375,10 @@ private fun AiTranslateContent(
                     onSelectCloudProvider = onSelectCloudProvider,
                     onAddCloudProvider = onAddCloudProvider,
                     onOpenModelPicker = onOpenModelPicker,
-                    onOpenModelManager = { onSectionSelected(AppSection.MODEL) },
+                    onDownloadModel = onDownloadModel,
+                    onDeleteModel = onDeleteModel,
                     onDefaultModeChanged = onDefaultModeChanged,
+                    onUpdateDefaultUnifiedModel = onUpdateDefaultUnifiedModel,
                     onClearHistory = onClearHistory,
                     onCheckAppUpdate = onCheckAppUpdate,
                     onDownloadAppUpdate = onDownloadAppUpdate,
@@ -378,7 +485,6 @@ private fun AiTranslateContent(
         Dialog(onDismissRequest = onCloseMiniTranslator) {
             MiniTranslateCard(
                 state = state,
-                onModeSelected = onModeSelected,
                 onTranslate = onTranslateMini,
                 onCopyTranslation = { text ->
                     clipboard.setText(AnnotatedString(text))
@@ -388,6 +494,63 @@ private fun AiTranslateContent(
                 onSpeakTranslation = { speakText(state.miniTranslatedText, state.targetLanguage) },
                 onOpenFullTranslate = onOpenFullTranslateFromMini,
                 onClose = onCloseMiniTranslator,
+            )
+        }
+    }
+
+    if (state.isUnifiedModelPickerOpen) {
+        ModalBottomSheet(onDismissRequest = onCloseUnifiedModelPicker) {
+            UnifiedModelPickerSheet(
+                state = state,
+                onSelectModel = onSelectUnifiedModel,
+                onFetchCloudModels = onFetchCloudModels,
+                onDownloadModel = onDownloadModel,
+            )
+        }
+    }
+
+    if (isToolSheetOpen) {
+        ModalBottomSheet(
+            onDismissRequest = { isToolSheetOpen = false },
+            containerColor = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+            dragHandle = {
+                Box(
+                    modifier = Modifier
+                        .padding(top = 10.dp, bottom = 6.dp)
+                        .size(width = 54.dp, height = 5.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.28f)),
+                )
+            },
+        ) {
+            TranslateToolboxSheet(
+                onTakePhoto = {
+                    isToolSheetOpen = false
+                    launchCamera()
+                },
+                onPickImage = {
+                    isToolSheetOpen = false
+                    launchGallery()
+                },
+            )
+        }
+    }
+
+    if (state.isImageTranslatorOpen) {
+        ModalBottomSheet(onDismissRequest = onCloseImageTranslator) {
+            ImageTranslateSheet(
+                state = state,
+                onRecognizedTextChanged = onUpdateImageRecognizedText,
+                onTranslate = onTranslateImageText,
+                onPickImage = ::launchGallery,
+                onCopyTranslation = { text ->
+                    clipboard.setText(AnnotatedString(text))
+                    Toast.makeText(context, "已复制译文", Toast.LENGTH_SHORT).show()
+                },
+                onSpeakTranslation = { speakText(state.imageTranslatedText, state.targetLanguage) },
+                onBringToHome = onBringImageTranslationToHome,
+                onClose = onCloseImageTranslator,
             )
         }
     }
@@ -412,12 +575,6 @@ private fun AppBottomBar(
             label = { Text("历史") },
         )
         NavigationBarItem(
-            selected = current == AppSection.MODEL,
-            onClick = { onSelected(AppSection.MODEL) },
-            icon = { Icon(Icons.Default.Storage, contentDescription = null) },
-            label = { Text("模型") },
-        )
-        NavigationBarItem(
             selected = current == AppSection.SETTINGS,
             onClick = { onSelected(AppSection.SETTINGS) },
             icon = { Icon(Icons.Default.Settings, contentDescription = null) },
@@ -431,40 +588,326 @@ private fun TranslateScreen(
     state: TranslateUiState,
     onSourceTextChanged: (String) -> Unit,
     onClearInput: () -> Unit,
-    onModeSelected: (TranslationMode) -> Unit,
     onOpenLanguagePicker: (LanguagePickerTarget) -> Unit,
     onSwapLanguages: () -> Unit,
     onTranslate: () -> Unit,
     onSpeakSource: () -> Unit,
     onSpeakTranslation: () -> Unit,
+    onOpenUnifiedModelPicker: () -> Unit,
 ) {
     val clipboard = LocalClipboardManager.current
     val context = LocalContext.current
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val gradientBrush = Brush.horizontalGradient(
+        colors = listOf(
+            primaryColor,
+            primaryColor.copy(alpha = 0.7f),
+        ),
+    )
 
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .background(MaterialTheme.colorScheme.surface)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(0.dp),
     ) {
-        item {
-            ModeSelector(
-                selected = state.selectedMode,
-                onSelected = onModeSelected,
+        // 模型选择 - 紧凑的胶囊按钮
+        Surface(
+            onClick = onOpenUnifiedModelPicker,
+            modifier = Modifier.align(Alignment.CenterHorizontally),
+            shape = RoundedCornerShape(20.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                val modelType = currentModelType(state)
+                Icon(
+                    imageVector = when (modelType) {
+                        ModelType.CLOUD -> Icons.Default.Cloud
+                        ModelType.OFFLINE -> Icons.Default.Storage
+                        ModelType.AUTO -> Icons.Default.Refresh
+                    },
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    text = currentModelDisplayName(state),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Icon(
+                    Icons.Default.ArrowDropDown,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+
+        Spacer(Modifier.height(14.dp))
+
+        // 语言选择栏 - 带浮动交换按钮
+        Box(
+            modifier = Modifier.fillMaxWidth(),
+            contentAlignment = Alignment.Center,
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Surface(
+                    onClick = { onOpenLanguagePicker(LanguagePickerTarget.SOURCE) },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(14.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
+                ) {
+                    Box(
+                        modifier = Modifier.padding(vertical = 12.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = state.sourceLanguage.displayName,
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
+                }
+                Spacer(Modifier.width(48.dp))
+                Surface(
+                    onClick = { onOpenLanguagePicker(LanguagePickerTarget.TARGET) },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(14.dp),
+                    color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.35f),
+                ) {
+                    Box(
+                        modifier = Modifier.padding(vertical = 12.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = state.targetLanguage.displayName,
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
+                }
+            }
+            // 浮动交换按钮
+            Surface(
+                onClick = onSwapLanguages,
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primary,
+                shadowElevation = 4.dp,
+                modifier = Modifier.size(40.dp),
+            ) {
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                    Icon(
+                        Icons.Default.SwapHoriz,
+                        contentDescription = "交换语言",
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+            }
+        }
+
+        Spacer(Modifier.height(14.dp))
+
+        // 输入区域 - 压缩后的主入口卡
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(20.dp),
+            color = MaterialTheme.colorScheme.surface,
+            border = BorderStroke(
+                1.dp,
+                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
+            ),
+            tonalElevation = 1.dp,
+            shadowElevation = 1.dp,
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    IconButton(
+                        onClick = onSpeakSource,
+                        enabled = state.sourceText.isNotBlank(),
+                        modifier = Modifier.size(32.dp),
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.VolumeUp,
+                            contentDescription = "朗读原文",
+                            modifier = Modifier.size(18.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    IconButton(
+                        onClick = onClearInput,
+                        enabled = state.sourceText.isNotEmpty(),
+                        modifier = Modifier.size(32.dp),
+                    ) {
+                        Icon(
+                            Icons.Default.Clear,
+                            contentDescription = "清空",
+                            modifier = Modifier.size(18.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                BasicTextField(
+                    value = state.sourceText,
+                    onValueChange = onSourceTextChanged,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 110.dp, max = 180.dp),
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(
+                        color = MaterialTheme.colorScheme.onSurface,
+                        lineHeight = 26.sp,
+                    ),
+                    decorationBox = { innerTextField ->
+                        Box {
+                            if (state.sourceText.isEmpty()) {
+                                Text(
+                                    "输入或粘贴要翻译的文本...",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f),
+                                )
+                            }
+                            innerTextField()
+                        }
+                    },
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = "${state.sourceText.length}/5000",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                    modifier = Modifier.align(Alignment.End),
+                )
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        // 翻译按钮 - 渐变色
+        Button(
+            onClick = onTranslate,
+            enabled = !state.isTranslating && state.sourceText.isNotBlank(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                containerColor = Color.Transparent,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+                disabledContainerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+            ),
+            contentPadding = PaddingValues(0.dp),
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        brush = if (!state.isTranslating && state.sourceText.isNotBlank()) {
+                            gradientBrush
+                        } else {
+                            Brush.horizontalGradient(
+                                colors = listOf(
+                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                                ),
+                            )
+                        },
+                        shape = RoundedCornerShape(16.dp),
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    if (state.isTranslating) {
+                        androidx.compose.material3.CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            strokeWidth = 2.dp,
+                        )
+                        Text(
+                            "翻译中...",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimary,
+                        )
+                    } else {
+                        Icon(
+                            Icons.Default.Translate,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                        )
+                        Text(
+                            "翻译",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                }
+            }
+        }
+
+        // 错误/信息提示
+        if (state.errorMessage != null || state.infoMessage != null) {
+            Spacer(Modifier.height(12.dp))
+            MessageBanner(
+                error = state.errorMessage,
+                info = state.infoMessage,
             )
         }
-        item {
-            LanguageRow(
-                source = state.sourceLanguage,
-                target = state.targetLanguage,
-                onOpenSource = { onOpenLanguagePicker(LanguagePickerTarget.SOURCE) },
-                onOpenTarget = { onOpenLanguagePicker(LanguagePickerTarget.TARGET) },
-                onSwap = onSwapLanguages,
-            )
-        }
-        item {
-            OutlinedCard(shape = RoundedCornerShape(8.dp)) {
+
+        Spacer(Modifier.height(16.dp))
+
+        // 输出区域 - 带左侧色条装饰
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(20.dp),
+            tonalElevation = 0.dp,
+            shadowElevation = 0.dp,
+            color = MaterialTheme.colorScheme.surface,
+            border = BorderStroke(
+                1.dp,
+                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.22f),
+            ),
+        ) {
+            Row(modifier = Modifier.fillMaxWidth()) {
+                // 左侧装饰色条
+                Box(
+                    modifier = Modifier
+                        .width(4.dp)
+                        .heightIn(min = 120.dp)
+                        .background(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    MaterialTheme.colorScheme.primary,
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                                ),
+                            ),
+                            shape = RoundedCornerShape(topStart = 20.dp, bottomStart = 20.dp),
+                        ),
+                )
                 Column(
-                    modifier = Modifier.padding(14.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Row(
@@ -472,81 +915,23 @@ private fun TranslateScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text("输入原文", style = MaterialTheme.typography.titleSmall)
-                        Row {
-                            IconButton(
-                                onClick = onSpeakSource,
-                                enabled = state.sourceText.isNotBlank(),
-                            ) {
-                                Icon(Icons.AutoMirrored.Filled.VolumeUp, contentDescription = "朗读原文")
-                            }
-                            IconButton(
-                                onClick = onClearInput,
-                                enabled = state.sourceText.isNotEmpty(),
-                            ) {
-                                Icon(Icons.Default.Clear, contentDescription = "清空")
-                            }
-                        }
-                    }
-                    OutlinedTextField(
-                        value = state.sourceText,
-                        onValueChange = onSourceTextChanged,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(170.dp),
-                        placeholder = { Text("在此输入或粘贴要翻译的内容...") },
-                        keyboardOptions = KeyboardOptions(
-                            capitalization = KeyboardCapitalization.Sentences,
-                        ),
-                        maxLines = 8,
-                    )
-                    Text(
-                        text = "${state.sourceText.length}/5000",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.align(Alignment.End),
-                    )
-                }
-            }
-        }
-        item {
-            Button(
-                onClick = onTranslate,
-                enabled = !state.isTranslating,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
-                shape = RoundedCornerShape(8.dp),
-            ) {
-                Icon(Icons.Default.Translate, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text(if (state.isTranslating) "正在翻译" else "翻译")
-            }
-        }
-        item {
-            MessageBanner(
-                error = state.errorMessage,
-                info = state.infoMessage,
-            )
-        }
-        item {
-            OutlinedCard(shape = RoundedCornerShape(8.dp)) {
-                Column(
-                    modifier = Modifier.padding(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text("译文", style = MaterialTheme.typography.titleSmall)
-                        Row {
+                        Text(
+                            text = state.targetLanguage.displayName,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(0.dp)) {
                             IconButton(
                                 onClick = onSpeakTranslation,
                                 enabled = state.translatedText.isNotBlank(),
+                                modifier = Modifier.size(34.dp),
                             ) {
-                                Icon(Icons.AutoMirrored.Filled.VolumeUp, contentDescription = "朗读译文")
+                                Icon(
+                                    Icons.AutoMirrored.Filled.VolumeUp,
+                                    contentDescription = "朗读译文",
+                                    modifier = Modifier.size(18.dp),
+                                )
                             }
                             IconButton(
                                 onClick = {
@@ -554,29 +939,677 @@ private fun TranslateScreen(
                                     Toast.makeText(context, "已复制译文", Toast.LENGTH_SHORT).show()
                                 },
                                 enabled = state.translatedText.isNotBlank(),
+                                modifier = Modifier.size(34.dp),
                             ) {
-                                Icon(Icons.Default.ContentCopy, contentDescription = "复制")
+                                Icon(
+                                    Icons.Default.ContentCopy,
+                                    contentDescription = "复制",
+                                    modifier = Modifier.size(18.dp),
+                                )
                             }
                         }
                     }
                     if (state.isTranslating) {
-                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                        Text(
-                            text = "翻译中，请稍候...",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    } else {
-                        Text(
-                            text = state.translatedText.ifBlank { "译文将显示在这里" },
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = if (state.translatedText.isBlank()) {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            } else {
-                                MaterialTheme.colorScheme.onSurface
-                            },
-                            modifier = Modifier.height(140.dp),
+                        LinearProgressIndicator(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(4.dp)),
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
                         )
                     }
+                    Text(
+                        text = state.translatedText.ifBlank { "译文将显示在这里" },
+                        style = if (state.translatedText.isNotBlank()) {
+                            MaterialTheme.typography.bodyLarge
+                        } else {
+                            MaterialTheme.typography.bodyMedium
+                        },
+                        color = if (state.translatedText.isBlank()) {
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
+                        } else {
+                            MaterialTheme.colorScheme.onSurface
+                        },
+                        modifier = Modifier.heightIn(min = 100.dp),
+                        lineHeight = 26.sp,
+                    )
+                }
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+    }
+}
+
+@Composable
+private fun TranslateToolboxSheet(
+    onTakePhoto: () -> Unit,
+    onPickImage: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Text(
+            text = "工具",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        ToolboxActionItem(
+            title = "拍照翻译",
+            subtitle = "拍摄文字，快速识别翻译",
+            icon = { Icon(Icons.Default.AddAPhoto, contentDescription = null) },
+            container = Color(0xFFEAF8FC),
+            content = Color(0xFF159FBE),
+            onClick = onTakePhoto,
+        )
+        ToolboxActionItem(
+            title = "相册导入",
+            subtitle = "从相册选择图片翻译",
+            icon = { Icon(Icons.Default.Image, contentDescription = null) },
+            container = Color(0xFFF0F0FF),
+            content = Color(0xFF5966E8),
+            onClick = onPickImage,
+        )
+        DashedDivider(modifier = Modifier.padding(top = 4.dp))
+        Text(
+            text = "更多工具后续加入",
+            modifier = Modifier
+                .align(Alignment.CenterHorizontally)
+                .padding(top = 8.dp, bottom = 26.dp),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.82f),
+        )
+    }
+}
+
+@Composable
+private fun ToolboxActionItem(
+    title: String,
+    subtitle: String,
+    icon: @Composable () -> Unit,
+    container: Color,
+    content: Color,
+    onClick: () -> Unit,
+) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        color = container,
+        contentColor = content,
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.68f)),
+        shadowElevation = 0.dp,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Surface(
+                modifier = Modifier.size(58.dp),
+                shape = RoundedCornerShape(16.dp),
+                color = Color.White.copy(alpha = 0.92f),
+                contentColor = content,
+                shadowElevation = 1.dp,
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    icon()
+                }
+            }
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.88f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DashedDivider(modifier: Modifier = Modifier) {
+    val color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.88f)
+    Canvas(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(1.dp),
+    ) {
+        drawLine(
+            color = color,
+            start = androidx.compose.ui.geometry.Offset(0f, 0f),
+            end = androidx.compose.ui.geometry.Offset(size.width, 0f),
+            pathEffect = PathEffect.dashPathEffect(floatArrayOf(12f, 10f), 0f),
+        )
+    }
+}
+
+@Composable
+private fun ModelSelectorChip(
+    state: TranslateUiState,
+    onClick: () -> Unit,
+) {
+    val modelName = currentModelDisplayName(state)
+    val subtitle = currentModelSubtitle(state)
+    val modelType = currentModelType(state)
+
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Surface(
+                modifier = Modifier.size(40.dp),
+                shape = RoundedCornerShape(10.dp),
+                color = when (modelType) {
+                    ModelType.CLOUD -> MaterialTheme.colorScheme.primaryContainer
+                    ModelType.OFFLINE -> MaterialTheme.colorScheme.tertiaryContainer
+                    ModelType.AUTO -> MaterialTheme.colorScheme.secondaryContainer
+                },
+            ) {
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                    Icon(
+                        imageVector = when (modelType) {
+                            ModelType.CLOUD -> Icons.Default.Cloud
+                            ModelType.OFFLINE -> Icons.Default.Storage
+                            ModelType.AUTO -> Icons.Default.Refresh
+                        },
+                        contentDescription = null,
+                        tint = when (modelType) {
+                            ModelType.CLOUD -> MaterialTheme.colorScheme.onPrimaryContainer
+                            ModelType.OFFLINE -> MaterialTheme.colorScheme.onTertiaryContainer
+                            ModelType.AUTO -> MaterialTheme.colorScheme.onSecondaryContainer
+                        },
+                    )
+                }
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = modelName,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Icon(
+                imageVector = Icons.Default.ArrowDropDown,
+                contentDescription = "选择模型",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+private fun currentModelDisplayName(state: TranslateUiState): String {
+    val selected = state.selectedUnifiedModel?.takeIf { it.type == currentModelType(state) }
+    return when (state.selectedMode) {
+        TranslationMode.CLOUD -> selected?.displayName
+            ?: state.settings.modelName.ifBlank { "选择云端模型" }
+        TranslationMode.OFFLINE -> selected?.displayName ?: "HY-MT 1.5B"
+        TranslationMode.AUTO -> selected?.displayName ?: "自动选择"
+    }
+}
+
+private fun currentModelSubtitle(state: TranslateUiState): String {
+    val selected = state.selectedUnifiedModel?.takeIf { it.type == currentModelType(state) }
+    return selected?.subtitle ?: when (state.selectedMode) {
+        TranslationMode.CLOUD -> "${state.settings.selectedProvider.name} · 云端"
+        TranslationMode.OFFLINE -> "本地推理 · 离线"
+        TranslationMode.AUTO -> "智能切换 · 自动"
+    }
+}
+
+private fun currentModelType(state: TranslateUiState): ModelType {
+    return state.selectedUnifiedModel
+        ?.takeIf { modeMatchesModelType(state.selectedMode, it.type) }
+        ?.type
+        ?: when (state.selectedMode) {
+            TranslationMode.CLOUD -> ModelType.CLOUD
+            TranslationMode.OFFLINE -> ModelType.OFFLINE
+            TranslationMode.AUTO -> ModelType.AUTO
+        }
+}
+
+private fun modeMatchesModelType(mode: TranslationMode, type: ModelType): Boolean {
+    return when (mode) {
+        TranslationMode.CLOUD -> type == ModelType.CLOUD
+        TranslationMode.OFFLINE -> type == ModelType.OFFLINE
+        TranslationMode.AUTO -> type == ModelType.AUTO
+    }
+}
+
+@Composable
+private fun UnifiedModelPickerSheet(
+    state: TranslateUiState,
+    onSelectModel: (UnifiedModelOption) -> Unit,
+    onFetchCloudModels: () -> Unit,
+    onDownloadModel: () -> Unit,
+) {
+    val offlineModels = state.unifiedModelList.filter { it.type == ModelType.OFFLINE }
+    val cloudModels = state.unifiedModelList.filter { it.type == ModelType.CLOUD }
+    val autoModels = state.unifiedModelList.filter { it.type == ModelType.AUTO }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .imePadding()
+            .padding(horizontal = 20.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = "选择翻译模型",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f),
+            )
+            TextButton(
+                onClick = onFetchCloudModels,
+                enabled = !state.isFetchingModels,
+            ) {
+                Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(4.dp))
+                Text(if (state.isFetchingModels) "获取中" else "获取模型")
+            }
+        }
+
+        if (state.isFetchingModels) {
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+        }
+
+        if (offlineModels.isNotEmpty()) {
+            Text(
+                text = "离线模型",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            offlineModels.forEach { model ->
+                UnifiedModelItem(
+                    model = model,
+                    isSelected = state.selectedUnifiedModel?.id == model.id
+                            || (state.selectedUnifiedModel == null && state.selectedMode == TranslationMode.OFFLINE),
+                    onSelect = { onSelectModel(model) },
+                    trailing = {
+                        if (!model.isAvailable) {
+                            OutlinedButton(
+                                onClick = onDownloadModel,
+                                shape = RoundedCornerShape(16.dp),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                            ) {
+                                Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text("下载", style = MaterialTheme.typography.labelSmall)
+                            }
+                        } else {
+                            Text(
+                                text = "已下载",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    },
+                )
+            }
+        }
+
+        if (cloudModels.isNotEmpty()) {
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            Text(
+                text = "云端模型",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            LazyColumn(
+                modifier = Modifier.heightIn(max = 280.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                items(cloudModels, key = { it.id }) { model ->
+                    UnifiedModelItem(
+                        model = model,
+                        isSelected = state.selectedUnifiedModel?.id == model.id
+                                || (state.selectedUnifiedModel == null && state.selectedMode == TranslationMode.CLOUD && model.displayName == state.settings.modelName),
+                        onSelect = { onSelectModel(model) },
+                    )
+                }
+            }
+        }
+
+        if (autoModels.isNotEmpty()) {
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            autoModels.forEach { model ->
+                UnifiedModelItem(
+                    model = model,
+                    isSelected = state.selectedUnifiedModel?.id == model.id
+                            || (state.selectedUnifiedModel == null && state.selectedMode == TranslationMode.AUTO),
+                    onSelect = { onSelectModel(model) },
+                )
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+    }
+}
+
+@Composable
+private fun UnifiedModelItem(
+    model: UnifiedModelOption,
+    isSelected: Boolean,
+    onSelect: () -> Unit,
+    trailing: (@Composable () -> Unit)? = null,
+) {
+    Surface(
+        onClick = onSelect,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        color = if (isSelected) {
+            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+        } else {
+            Color.Transparent
+        },
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Surface(
+                modifier = Modifier.size(36.dp),
+                shape = RoundedCornerShape(16.dp),
+                color = when (model.type) {
+                    ModelType.CLOUD -> MaterialTheme.colorScheme.primaryContainer
+                    ModelType.OFFLINE -> MaterialTheme.colorScheme.tertiaryContainer
+                    ModelType.AUTO -> MaterialTheme.colorScheme.secondaryContainer
+                },
+            ) {
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                    Icon(
+                        imageVector = when (model.type) {
+                            ModelType.CLOUD -> Icons.Default.Cloud
+                            ModelType.OFFLINE -> Icons.Default.Storage
+                            ModelType.AUTO -> Icons.Default.Refresh
+                        },
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = when (model.type) {
+                            ModelType.CLOUD -> MaterialTheme.colorScheme.onPrimaryContainer
+                            ModelType.OFFLINE -> MaterialTheme.colorScheme.onTertiaryContainer
+                            ModelType.AUTO -> MaterialTheme.colorScheme.onSecondaryContainer
+                        },
+                    )
+                }
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = model.displayName,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = model.subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            if (trailing != null) {
+                trailing()
+            }
+            if (isSelected) {
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = "已选择",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ImageTranslateSheet(
+    state: TranslateUiState,
+    onRecognizedTextChanged: (String) -> Unit,
+    onTranslate: () -> Unit,
+    onPickImage: () -> Unit,
+    onCopyTranslation: (String) -> Unit,
+    onSpeakTranslation: () -> Unit,
+    onBringToHome: () -> Unit,
+    onClose: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .imePadding()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "图片翻译",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    text = state.imageSourceLabel,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            IconButton(onClick = onClose) {
+                Icon(Icons.Default.Clear, contentDescription = "关闭图片翻译")
+            }
+        }
+
+        ImagePreviewCard(uri = state.imageUri)
+
+        if (state.isImageRecognizing) {
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+        }
+        if (state.imageErrorMessage != null || state.imageInfoMessage != null) {
+            MessageBanner(
+                error = state.imageErrorMessage,
+                info = state.imageInfoMessage,
+            )
+        }
+
+        OutlinedTextField(
+            value = state.imageRecognizedText,
+            onValueChange = onRecognizedTextChanged,
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 140.dp),
+            label = { Text("识别文本") },
+            placeholder = { Text("图片中的文字会显示在这里，可手动修改") },
+            maxLines = 8,
+            shape = RoundedCornerShape(16.dp),
+        )
+
+        Button(
+            onClick = onTranslate,
+            enabled = !state.isImageRecognizing &&
+                    !state.isImageTranslating &&
+                    state.imageRecognizedText.isNotBlank(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp),
+            shape = RoundedCornerShape(16.dp),
+        ) {
+            Icon(Icons.Default.Translate, contentDescription = null)
+            Spacer(Modifier.width(8.dp))
+            Text(if (state.isImageTranslating) "正在翻译" else "翻译识别文本")
+        }
+
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.32f),
+        ) {
+            Column(
+                modifier = Modifier.padding(14.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(
+                        text = "译文",
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                    Row {
+                        IconButton(
+                            onClick = onSpeakTranslation,
+                            enabled = state.imageTranslatedText.isNotBlank(),
+                            modifier = Modifier.size(34.dp),
+                        ) {
+                            Icon(Icons.AutoMirrored.Filled.VolumeUp, contentDescription = "朗读图片译文")
+                        }
+                        IconButton(
+                            onClick = { onCopyTranslation(state.imageTranslatedText) },
+                            enabled = state.imageTranslatedText.isNotBlank(),
+                            modifier = Modifier.size(34.dp),
+                        ) {
+                            Icon(Icons.Default.ContentCopy, contentDescription = "复制图片译文")
+                        }
+                    }
+                }
+                if (state.isImageTranslating) {
+                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                }
+                Text(
+                    text = state.imageTranslatedText.ifBlank { "译文将显示在这里" },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (state.imageTranslatedText.isBlank()) {
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    },
+                    lineHeight = 24.sp,
+                )
+            }
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            OutlinedButton(
+                onClick = onPickImage,
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(14.dp),
+            ) {
+                Icon(Icons.Default.Refresh, contentDescription = null)
+                Spacer(Modifier.width(6.dp))
+                Text("重新选择")
+            }
+            Button(
+                onClick = onBringToHome,
+                enabled = state.imageRecognizedText.isNotBlank() || state.imageTranslatedText.isNotBlank(),
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(14.dp),
+            ) {
+                Icon(Icons.Default.Home, contentDescription = null)
+                Spacer(Modifier.width(6.dp))
+                Text("带入首页")
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+    }
+}
+
+@Composable
+private fun ImagePreviewCard(uri: String?) {
+    val context = LocalContext.current
+    val imageBitmap = remember(uri) {
+        if (uri == null) {
+            null
+        } else {
+            runCatching {
+                context.contentResolver.openInputStream(Uri.parse(uri))?.use { stream ->
+                    BitmapFactory.decodeStream(stream)?.asImageBitmap()
+                }
+            }.getOrNull()
+        }
+    }
+
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(190.dp),
+        shape = RoundedCornerShape(18.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+    ) {
+        if (imageBitmap != null) {
+            Image(
+                bitmap = imageBitmap,
+                contentDescription = "待识别图片",
+                modifier = Modifier.fillMaxSize(),
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+            )
+        } else {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center,
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Icon(
+                        Icons.Default.Image,
+                        contentDescription = null,
+                        modifier = Modifier.size(42.dp),
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                    Text(
+                        text = "图片预览",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
         }
@@ -586,7 +1619,6 @@ private fun TranslateScreen(
 @Composable
 private fun MiniTranslateCard(
     state: TranslateUiState,
-    onModeSelected: (TranslationMode) -> Unit,
     onTranslate: () -> Unit,
     onCopyTranslation: (String) -> Unit,
     onSpeakSource: () -> Unit,
@@ -649,7 +1681,7 @@ private fun MiniTranslateCard(
 
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp),
+                shape = RoundedCornerShape(16.dp),
                 color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.28f),
             ) {
                 Row(
@@ -668,10 +1700,10 @@ private fun MiniTranslateCard(
                 }
             }
 
-            Text("翻译模式", fontWeight = FontWeight.Bold)
-            ModeSelector(
-                selected = state.selectedMode,
-                onSelected = onModeSelected,
+            Text(
+                text = "使用模型：${currentModelDisplayName(state)}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
             if (state.miniErrorMessage != null || state.miniInfoMessage != null) {
@@ -687,7 +1719,7 @@ private fun MiniTranslateCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(50.dp),
-                shape = RoundedCornerShape(8.dp),
+                shape = RoundedCornerShape(16.dp),
             ) {
                 Icon(Icons.Default.Translate, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
@@ -696,7 +1728,7 @@ private fun MiniTranslateCard(
 
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp),
+                shape = RoundedCornerShape(16.dp),
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
             ) {
                 Column(
@@ -752,7 +1784,7 @@ private fun MiniTranslateCard(
             OutlinedButton(
                 onClick = onOpenFullTranslate,
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp),
+                shape = RoundedCornerShape(16.dp),
             ) {
                 Icon(Icons.Default.Home, contentDescription = null)
                 Spacer(Modifier.width(6.dp))
@@ -811,7 +1843,7 @@ private fun ClipboardQuickTranslateCard(
 
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp),
+                shape = RoundedCornerShape(16.dp),
                 color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.28f),
             ) {
                 Row(
@@ -835,14 +1867,14 @@ private fun ClipboardQuickTranslateCard(
                 OutlinedButton(
                     onClick = onDismiss,
                     modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(16.dp),
                 ) {
                     Text("忽略")
                 }
                 Button(
                     onClick = onAccept,
                     modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(16.dp),
                 ) {
                     Icon(Icons.Default.Translate, contentDescription = null)
                     Spacer(Modifier.width(6.dp))
@@ -863,7 +1895,7 @@ private fun FloatingTextSection(
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp),
+        shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
     ) {
         Column(
@@ -897,32 +1929,6 @@ private fun FloatingTextSection(
     }
 }
 
-@Composable
-private fun ModeSelector(
-    selected: TranslationMode,
-    onSelected: (TranslationMode) -> Unit,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        TranslationMode.entries.forEach { mode ->
-            FilterChip(
-                selected = selected == mode,
-                onClick = { onSelected(mode) },
-                label = { Text(mode.label) },
-                leadingIcon = {
-                    when (mode) {
-                        TranslationMode.CLOUD -> Icon(Icons.Default.Cloud, contentDescription = null)
-                        TranslationMode.OFFLINE -> Icon(Icons.Default.Storage, contentDescription = null)
-                        TranslationMode.AUTO -> Icon(Icons.Default.Refresh, contentDescription = null)
-                    }
-                },
-                modifier = Modifier.weight(1f),
-            )
-        }
-    }
-}
 
 @Composable
 private fun LanguageRow(
@@ -940,7 +1946,7 @@ private fun LanguageRow(
         OutlinedButton(
             onClick = onOpenSource,
             modifier = Modifier.weight(1f),
-            shape = RoundedCornerShape(8.dp),
+            shape = RoundedCornerShape(16.dp),
         ) {
             Text(source.displayName, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
@@ -950,7 +1956,7 @@ private fun LanguageRow(
         OutlinedButton(
             onClick = onOpenTarget,
             modifier = Modifier.weight(1f),
-            shape = RoundedCornerShape(8.dp),
+            shape = RoundedCornerShape(16.dp),
         ) {
             Text(target.displayName, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
@@ -970,7 +1976,7 @@ private fun MessageBanner(
         } else {
             MaterialTheme.colorScheme.primaryContainer
         },
-        shape = RoundedCornerShape(8.dp),
+        shape = RoundedCornerShape(16.dp),
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
@@ -1189,7 +2195,7 @@ private fun ModelPickerSheet(
             Button(
                 onClick = onAddCustomModel,
                 enabled = state.modelToAdd.isNotBlank(),
-                shape = RoundedCornerShape(8.dp),
+                shape = RoundedCornerShape(16.dp),
             ) {
                 Icon(Icons.Default.Add, contentDescription = null)
                 Spacer(Modifier.width(4.dp))
@@ -1260,7 +2266,7 @@ private fun HistoryItem(
     onDelete: () -> Unit,
 ) {
     OutlinedCard(
-        shape = RoundedCornerShape(8.dp),
+        shape = RoundedCornerShape(16.dp),
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
@@ -1365,7 +2371,7 @@ private fun HistoryDetailSheet(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        OutlinedCard(shape = RoundedCornerShape(8.dp)) {
+        OutlinedCard(shape = RoundedCornerShape(16.dp)) {
             Column(
                 modifier = Modifier.padding(14.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -1390,7 +2396,7 @@ private fun HistoryDetailSheet(
                 )
             }
         }
-        OutlinedCard(shape = RoundedCornerShape(8.dp)) {
+        OutlinedCard(shape = RoundedCornerShape(16.dp)) {
             Column(
                 modifier = Modifier.padding(14.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -1422,7 +2428,7 @@ private fun HistoryDetailSheet(
         }
         OutlinedButton(
             onClick = onDelete,
-            shape = RoundedCornerShape(8.dp),
+            shape = RoundedCornerShape(16.dp),
             modifier = Modifier.fillMaxWidth(),
         ) {
             Icon(Icons.Default.Delete, contentDescription = null)
@@ -1453,7 +2459,7 @@ private fun ModelScreen(
             fontWeight = FontWeight.Bold,
         )
         OutlinedCard(
-            shape = RoundedCornerShape(8.dp),
+            shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.outlinedCardColors(
                 containerColor = if (modelState.isAvailable) {
                     MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
@@ -1514,7 +2520,7 @@ private fun ModelScreen(
                     Button(
                         onClick = onDownloadModel,
                         enabled = !modelState.isDownloading,
-                        shape = RoundedCornerShape(8.dp),
+                        shape = RoundedCornerShape(16.dp),
                     ) {
                         Icon(Icons.Default.Download, contentDescription = null)
                         Spacer(Modifier.width(6.dp))
@@ -1523,7 +2529,7 @@ private fun ModelScreen(
                     OutlinedButton(
                         onClick = onDeleteModel,
                         enabled = modelState.isAvailable && !modelState.isDownloading,
-                        shape = RoundedCornerShape(8.dp),
+                        shape = RoundedCornerShape(16.dp),
                     ) {
                         Icon(Icons.Default.Delete, contentDescription = null)
                         Spacer(Modifier.width(6.dp))
@@ -1532,7 +2538,7 @@ private fun ModelScreen(
                 }
             }
         }
-        OutlinedCard(shape = RoundedCornerShape(8.dp)) {
+        OutlinedCard(shape = RoundedCornerShape(16.dp)) {
             Column(
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -1558,8 +2564,10 @@ private fun SettingsScreen(
     onSelectCloudProvider: (String) -> Unit,
     onAddCloudProvider: () -> Unit,
     onOpenModelPicker: () -> Unit,
-    onOpenModelManager: () -> Unit,
+    onDownloadModel: () -> Unit,
+    onDeleteModel: () -> Unit,
     onDefaultModeChanged: (TranslationMode) -> Unit,
+    onUpdateDefaultUnifiedModel: (UnifiedModelOption) -> Unit,
     onClearHistory: () -> Unit,
     onCheckAppUpdate: () -> Unit,
     onDownloadAppUpdate: () -> Unit,
@@ -1608,15 +2616,16 @@ private fun SettingsScreen(
             }
         }
         item {
-            SettingsModule(
+            CollapsibleSettingsSection(
                 title = "AI 模型服务",
                 icon = {
                     ProviderIconBadge(
                         name = selectedProvider.name,
                         baseUrl = selectedProvider.baseUrl,
-                        modifier = Modifier.size(38.dp),
+                        modifier = Modifier.size(24.dp),
                     )
                 },
+                initialExpanded = true,
             ) {
                 CurrentProviderSummary(
                     provider = selectedProvider,
@@ -1645,8 +2654,8 @@ private fun SettingsScreen(
             }
         }
         item {
-            SettingsModule(
-                title = "离线模型",
+            CollapsibleSettingsSection(
+                title = "离线模型管理",
                 icon = { Icon(Icons.Default.Storage, contentDescription = null) },
             ) {
                 Row(
@@ -1655,7 +2664,7 @@ private fun SettingsScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("HY-MT Q4_K_M", fontWeight = FontWeight.Bold)
+                        Text("HY-MT 1.5B Q4_K_M", fontWeight = FontWeight.Bold)
                         Text(
                             text = if (state.modelState.isAvailable) {
                                 "本地可用 · ${formatBytes(state.modelState.downloadedBytes)}"
@@ -1666,32 +2675,138 @@ private fun SettingsScreen(
                             style = MaterialTheme.typography.bodyMedium,
                         )
                     }
-                    OutlinedButton(
-                        onClick = onOpenModelManager,
-                        shape = RoundedCornerShape(8.dp),
-                    ) {
-                        Text("管理模型")
+                }
+                if (state.modelState.isDownloading) {
+                    LinearProgressIndicator(
+                        progress = { state.modelState.progress },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Text(
+                        text = "下载中 ${(state.modelState.progress * 100).toInt()}%",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    if (!state.modelState.isAvailable) {
+                        Button(
+                            onClick = onDownloadModel,
+                            enabled = !state.modelState.isDownloading,
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Icon(Icons.Default.Download, contentDescription = null)
+                            Spacer(Modifier.width(6.dp))
+                            Text("下载模型")
+                        }
+                    } else {
+                        OutlinedButton(
+                            onClick = onDeleteModel,
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Icon(Icons.Default.Delete, contentDescription = null)
+                            Spacer(Modifier.width(6.dp))
+                            Text("删除模型")
+                        }
                     }
                 }
             }
         }
         item {
-            SettingsModule(
-                title = "翻译偏好",
+            CollapsibleSettingsSection(
+                title = "默认翻译模型",
                 icon = { Icon(Icons.Default.Translate, contentDescription = null) },
+                initialExpanded = true,
             ) {
-                Text("默认翻译模式", fontWeight = FontWeight.Bold)
-                ModeSelector(
-                    selected = state.settings.defaultMode,
-                    onSelected = onDefaultModeChanged,
+                Text("当前默认模型", fontWeight = FontWeight.Bold)
+                val currentDefault = state.selectedUnifiedModel
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Icon(
+                            imageVector = when (currentDefault?.type) {
+                                ModelType.OFFLINE -> Icons.Default.Storage
+                                ModelType.CLOUD -> Icons.Default.Cloud
+                                else -> Icons.Default.SwapHoriz
+                            },
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = currentDefault?.displayName ?: "未选择",
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            )
+                            Text(
+                                text = currentDefault?.subtitle ?: "",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
+                            )
+                        }
+                    }
+                }
+                Text(
+                    text = "可在翻译页顶部快速切换模型，此处设置的是每次启动时的默认值。",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                SettingsStaticRow("默认源语言", "自动检测")
-                SettingsStaticRow("默认目标语言", "简体中文")
-                SettingsStaticRow("提示词风格", "简洁（仅输出译文）")
+                LazyColumn(modifier = Modifier.heightIn(max = 200.dp)) {
+                    items(state.unifiedModelList) { model ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onUpdateDefaultUnifiedModel(model) }
+                                .padding(vertical = 10.dp, horizontal = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            Icon(
+                                imageVector = when (model.type) {
+                                    ModelType.OFFLINE -> Icons.Default.Storage
+                                    ModelType.CLOUD -> Icons.Default.Cloud
+                                    ModelType.AUTO -> Icons.Default.SwapHoriz
+                                },
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(model.displayName, style = MaterialTheme.typography.bodyMedium)
+                                if (model.subtitle.isNotBlank()) {
+                                    Text(
+                                        model.subtitle,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                            if (model.id == currentDefault?.id) {
+                                Icon(
+                                    Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
         item {
-            SettingsModule(
+            CollapsibleSettingsSection(
                 title = "文本朗读",
                 icon = { Icon(Icons.AutoMirrored.Filled.VolumeUp, contentDescription = null) },
             ) {
@@ -1729,7 +2844,7 @@ private fun SettingsScreen(
                     OutlinedButton(
                         onClick = onRefreshTts,
                         modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(8.dp),
+                        shape = RoundedCornerShape(12.dp),
                         contentPadding = PaddingValues(horizontal = 6.dp, vertical = 8.dp),
                     ) {
                         Text("重新检测", maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -1737,7 +2852,7 @@ private fun SettingsScreen(
                     OutlinedButton(
                         onClick = onInstallTtsData,
                         modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(8.dp),
+                        shape = RoundedCornerShape(12.dp),
                         contentPadding = PaddingValues(horizontal = 6.dp, vertical = 8.dp),
                     ) {
                         Text("安装语音包", maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -1745,7 +2860,7 @@ private fun SettingsScreen(
                     OutlinedButton(
                         onClick = onOpenTtsSettings,
                         modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(8.dp),
+                        shape = RoundedCornerShape(12.dp),
                         contentPadding = PaddingValues(horizontal = 6.dp, vertical = 8.dp),
                     ) {
                         Text("打开系统设置", maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -1755,7 +2870,7 @@ private fun SettingsScreen(
                     onClick = onTestTts,
                     enabled = ttsState.canSpeak,
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(12.dp),
                 ) {
                     Icon(Icons.AutoMirrored.Filled.VolumeUp, contentDescription = null)
                     Spacer(Modifier.width(6.dp))
@@ -1764,7 +2879,7 @@ private fun SettingsScreen(
             }
         }
         item {
-            SettingsModule(
+            CollapsibleSettingsSection(
                 title = "网络与性能",
                 icon = { Icon(Icons.Default.Refresh, contentDescription = null) },
             ) {
@@ -1779,7 +2894,7 @@ private fun SettingsScreen(
             }
         }
         item {
-            SettingsModule(
+            CollapsibleSettingsSection(
                 title = "悬浮翻译",
                 icon = { Icon(Icons.Default.Translate, contentDescription = null) },
             ) {
@@ -1797,7 +2912,7 @@ private fun SettingsScreen(
                         Button(
                             onClick = { openOverlayPermissionSettings(context) },
                             modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(8.dp),
+                            shape = RoundedCornerShape(16.dp),
                         ) {
                             Text("授权悬浮窗")
                         }
@@ -1811,7 +2926,7 @@ private fun SettingsScreen(
                                 Toast.makeText(context, "已开启悬浮球", Toast.LENGTH_SHORT).show()
                             },
                             modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(8.dp),
+                            shape = RoundedCornerShape(16.dp),
                         ) {
                             Text("开启悬浮球")
                         }
@@ -1824,7 +2939,7 @@ private fun SettingsScreen(
                                 Toast.makeText(context, "已关闭悬浮球", Toast.LENGTH_SHORT).show()
                             },
                             modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(8.dp),
+                            shape = RoundedCornerShape(16.dp),
                         ) {
                             Text("关闭悬浮球")
                         }
@@ -1833,7 +2948,7 @@ private fun SettingsScreen(
             }
         }
         item {
-            SettingsModule(
+            CollapsibleSettingsSection(
                 title = "历史与数据",
                 icon = { Icon(Icons.Default.History, contentDescription = null) },
             ) {
@@ -1841,7 +2956,7 @@ private fun SettingsScreen(
                 OutlinedButton(
                     onClick = onClearHistory,
                     enabled = state.histories.isNotEmpty(),
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(12.dp),
                 ) {
                     Icon(Icons.Default.Delete, contentDescription = null)
                     Spacer(Modifier.width(6.dp))
@@ -1850,8 +2965,8 @@ private fun SettingsScreen(
             }
         }
         item {
-            SettingsModule(
-                title = "关于与许可",
+            CollapsibleSettingsSection(
+                title = "关于与更新",
                 icon = { Icon(Icons.Default.Home, contentDescription = null) },
             ) {
                 SettingsStaticRow("应用版本", "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
@@ -1896,7 +3011,7 @@ private fun SettingsScreen(
                     Button(
                         onClick = onDownloadAppUpdate,
                         enabled = release.apkUrl.isNotBlank() && !state.isDownloadingAppUpdate,
-                        shape = RoundedCornerShape(8.dp),
+                        shape = RoundedCornerShape(16.dp),
                     ) {
                         Icon(Icons.Default.Download, contentDescription = null)
                         Spacer(Modifier.width(6.dp))
@@ -1935,6 +3050,16 @@ private fun openOverlayPermissionSettings(context: Context) {
         Uri.parse("package:${context.packageName}"),
     ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     context.startActivity(intent)
+}
+
+private fun createPhotoTranslateUri(context: Context): Uri {
+    val photoDir = File(context.cacheDir, "photo_translate").apply { mkdirs() }
+    val photoFile = File(photoDir, "photo_translate_${System.currentTimeMillis()}.jpg")
+    return FileProvider.getUriForFile(
+        context,
+        "${context.packageName}.fileprovider",
+        photoFile,
+    )
 }
 
 private fun installAppUpdate(context: Context, apkPath: String) {
@@ -2134,7 +3259,7 @@ private fun ProviderRow(
     Surface(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp),
+        shape = RoundedCornerShape(16.dp),
         color = if (selected) {
             MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.38f)
         } else {
@@ -2231,7 +3356,7 @@ private fun BrandBadge(
 ) {
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(8.dp),
+        shape = RoundedCornerShape(16.dp),
         color = container,
         contentColor = content,
     ) {
@@ -2286,24 +3411,38 @@ private fun resolveBrandVisual(value: String): BrandVisual {
 }
 
 @Composable
-private fun SettingsModule(
+private fun CollapsibleSettingsSection(
     title: String,
     icon: @Composable () -> Unit,
+    initialExpanded: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    OutlinedCard(shape = RoundedCornerShape(8.dp)) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
+    var expanded by rememberSaveable { mutableStateOf(initialExpanded) }
+    val rotationAngle by animateFloatAsState(
+        targetValue = if (expanded) 180f else 0f,
+        animationSpec = tween(300),
+        label = "expandArrow",
+    )
+
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        tonalElevation = 1.dp,
+        shadowElevation = if (expanded) 2.dp else 0.dp,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.animateContentSize(animationSpec = tween(300))) {
             Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { expanded = !expanded }
+                    .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Surface(
                     color = MaterialTheme.colorScheme.primaryContainer,
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.size(38.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.size(36.dp),
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         icon()
@@ -2313,9 +3452,27 @@ private fun SettingsModule(
                     text = title,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f),
+                )
+                Icon(
+                    imageVector = Icons.Default.ExpandMore,
+                    contentDescription = if (expanded) "收起" else "展开",
+                    modifier = Modifier.rotate(rotationAngle),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            content()
+            AnimatedVisibility(
+                visible = expanded,
+                enter = expandVertically(animationSpec = tween(300)) + fadeIn(animationSpec = tween(300)),
+                exit = shrinkVertically(animationSpec = tween(300)) + fadeOut(animationSpec = tween(200)),
+            ) {
+                Column(
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    content()
+                }
+            }
         }
     }
 }
@@ -2419,7 +3576,7 @@ private fun ProviderConfigSheet(
         )
         OutlinedButton(
             onClick = onAddCloudProvider,
-            shape = RoundedCornerShape(8.dp),
+            shape = RoundedCornerShape(16.dp),
             modifier = Modifier.fillMaxWidth(),
         ) {
             Icon(Icons.Default.Add, contentDescription = null)

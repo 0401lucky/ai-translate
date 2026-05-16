@@ -3,4 +3,7 @@
     <cache-path
         name="updates"
         path="updates/" />
+    <cache-path
+        name="photo_translate"
+        path="photo_translate/" />
 </paths>

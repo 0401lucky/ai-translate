@@ -10,9 +10,9 @@ android {
 
     val resolvedVersionCode = providers.gradleProperty("appVersionCode")
         .map(String::toInt)
-        .getOrElse(3)
+        .getOrElse(4)
     val resolvedVersionName = providers.gradleProperty("appVersionName")
-        .getOrElse("1.0.2")
+        .getOrElse("1.0.3")
 
     defaultConfig {
         applicationId = "com.mxwis.aitranslate"
@@ -65,6 +65,8 @@ dependencies {
 
     implementation("com.squareup.okhttp3:okhttp:5.3.0")
     implementation("com.llamatik:library-android:1.3.0")
+    implementation("com.google.mlkit:text-recognition:16.0.1")
+    implementation("com.google.mlkit:text-recognition-chinese:16.0.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
 
     testImplementation("junit:junit:4.13.2")

@@ -317,3 +317,70 @@
 - [x] 上传 R2 并验证 manifest、APK HEAD 和本地 SHA256。
 - [ ] 当前 `adb devices` 无在线设备，文本朗读真机发声和 1.0.1 到 1.0.2 应用内更新点击验证待补充。
 - [x] 提交并推送 GitHub。
+
+## 2026-05-15：翻译页模型选择状态修复
+
+- [x] 明确完成标准：云端模型选择要同步默认模式，重启后实际翻译模式与界面一致。
+- [x] 更新 `docs/task文档.md`，新增 Task 025。
+- [x] 修复 ViewModel 模型选择持久化。
+- [x] 修复翻译页模型名称展示逻辑。
+- [x] 增加单元测试。
+- [x] Kotlin 编译通过：`.\gradlew.bat :app:compileDebugKotlin --no-daemon --console=plain`。
+- [x] 全量单元测试结果 XML 通过：8 个测试类共 35 个测试均为 0 failure / 0 error；追加补丁后的命令超过 60 秒上限被截断。
+- [x] 受影响单测通过：`.\gradlew.bat :app:testDebugUnitTest --tests "com.mxwis.aitranslate.ui.TranslateViewModelTest" --no-daemon --console=plain`，耗时 54 秒。
+- [x] Debug APK 构建通过：`.\gradlew.bat :app:assembleDebug --no-daemon --console=plain`。
+- [ ] 当前 shell 中 `adb` 不在 PATH，未补充真机重启点击验证。
+- [x] 回写验证结果到 Task 文档。
+
+## 2026-05-15：有道式翻译首页与拍照翻译首版
+
+- [x] 明确完成标准：有道式首页快捷入口、拍照 / 相册 OCR、图片翻译面板、测试和构建通过。
+- [x] 更新 `docs/task文档.md`，新增 Task 026。
+- [x] 使用 imagegen 生成新版首页设计图并保存到 `docs/ui/photo-translate-home-design.png`。
+- [x] 接入 ML Kit 本地 OCR，使用 Latin + Chinese 本地识别模型。
+- [x] 实现拍照 / 相册导入入口。
+- [x] 实现图片翻译状态与面板。
+- [x] 增加单元测试。
+- [x] 运行编译、单元测试、Debug 构建和模拟器验证。
+- [x] 回写验证结果到 Task 文档。
+- [ ] 当前模拟器未配置云端 API Key，也未下载离线模型；真实模型输出需配置后补充设备侧翻译点测。
+
+## 2026-05-15：首页工具入口收纳优化
+
+- [x] 明确完成标准：首页收起快捷宫格，右上角工具入口打开工具面板，拍照 / 相册流程保持可用。
+- [x] 更新 `docs/task文档.md`，新增 Task 027。
+- [x] 使用 imagegen 生成工具入口设计图并保存到 `docs/ui/translate-toolbox-design.png`。
+- [x] 实现右上角工具入口和工具弹窗。
+- [x] 移除首页快捷宫格直接展示。
+- [x] 运行编译、单元测试、Debug 构建和模拟器验证。
+- [x] 回写验证结果到 Task 文档。
+
+## 2026-05-15：首页工具入口图标优化
+
+- [x] 明确完成标准：右上角不再使用九宫格，新图标更像工具入口，点击仍能打开工具弹窗。
+- [x] 更新 `docs/task文档.md`，新增 Task 028。
+- [x] 使用 imagegen 生成图标优化设计图并保存到 `docs/ui/translate-tool-icon-design.png`。
+- [x] 替换首页右上角工具入口图标。
+- [x] 编译并安装到模拟器截图验证。
+- [x] 回写验证结果到 Task 文档。
+
+## 2026-05-15：首页工具入口视觉对齐修正
+
+- [x] 明确完成标准：实际截图要接近参考图，白底轻量，工具入口语义明确，弹窗不粗重。
+- [x] 更新 `docs/task文档.md`，新增 Task 029。
+- [x] 使用 imagegen 生成视觉对齐参考图并保存到 `docs/ui/translate-home-visual-alignment-design.png`。
+- [x] 替换右上角工具入口为工具箱 / 公文包图标。
+- [x] 调整首页背景、顶部入口和工具弹窗视觉。
+- [x] 编译并构建 Debug APK。
+- [x] 安装到模拟器并截图验证。
+- [x] 回写验证结果到 Task 文档。
+
+## 2026-05-16：发布 1.0.3 内置更新包
+
+- [x] 明确完成标准：版本号 1.0.3 (4)、R2 latest.json 指向新版、构建测试通过、GitHub 推送完成。
+- [x] 更新 `docs/task文档.md`，新增 Task 030。
+- [x] 更新 App 默认版本号和 R2 发版脚本。
+- [x] 运行 Kotlin 编译、单元测试和 Debug 构建。
+- [x] 执行 R2 发版脚本并验证公开更新清单。
+- [x] 提交并推送 GitHub。
+- [x] 回写验证结果到 Task 文档。

@@ -2,14 +2,17 @@ package com.mxwis.aitranslate.ui
 
 import com.mxwis.aitranslate.data.history.TranslationHistoryEntity
 import com.mxwis.aitranslate.data.model.ModelState
+import com.mxwis.aitranslate.data.ocr.ImageTextRecognizerContract
 import com.mxwis.aitranslate.data.settings.AppSettings
 import com.mxwis.aitranslate.data.settings.CloudProviderSettings
 import com.mxwis.aitranslate.data.translation.TranslationRepositoryContract
 import com.mxwis.aitranslate.data.update.AppUpdateCheckResult
 import com.mxwis.aitranslate.data.update.AppUpdateRelease
+import com.mxwis.aitranslate.domain.ModelType
 import com.mxwis.aitranslate.domain.TranslateOutput
 import com.mxwis.aitranslate.domain.TranslateRequest
 import com.mxwis.aitranslate.domain.TranslationMode
+import com.mxwis.aitranslate.domain.UnifiedModelOption
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -105,6 +108,136 @@ class TranslateViewModelTest {
         assertEquals(downloadedFile.absolutePath, state.downloadedAppUpdatePath)
         assertEquals(downloadedFile.absolutePath, state.pendingAppUpdateInstallPath)
     }
+
+    @Test
+    fun `选择云端统一模型后会同步默认模式并按云端翻译`() = runTest {
+        val repository = FakeTranslationRepository(
+            initialSettings = AppSettings(
+                modelName = "gpt-4o-mini",
+                defaultMode = TranslationMode.OFFLINE,
+            ),
+        )
+        val viewModel = TranslateViewModel(repository)
+        advanceUntilIdle()
+
+        viewModel.selectUnifiedModel(
+            UnifiedModelOption(
+                id = "cloud-current-gpt-4o-mini",
+                displayName = "gpt-4o-mini",
+                type = ModelType.CLOUD,
+                providerName = "OpenAI",
+                subtitle = "OpenAI · 云端模型",
+            ),
+        )
+        advanceUntilIdle()
+        viewModel.updateSourceText("hello")
+        viewModel.translate()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(TranslationMode.CLOUD, state.selectedMode)
+        assertEquals(TranslationMode.CLOUD, state.settings.defaultMode)
+        assertEquals(ModelType.CLOUD, state.selectedUnifiedModel?.type)
+        assertEquals(TranslationMode.CLOUD, repository.updatedDefaultMode)
+        assertEquals("gpt-4o-mini", repository.updatedModelName)
+        assertEquals(TranslationMode.CLOUD, repository.lastTranslateMode)
+    }
+
+    @Test
+    fun `默认离线时统一模型状态不会误指向云端模型名`() = runTest {
+        val viewModel = TranslateViewModel(
+            FakeTranslationRepository(
+                initialSettings = AppSettings(
+                    modelName = "gpt-4o-mini",
+                    defaultMode = TranslationMode.OFFLINE,
+                ),
+            ),
+        )
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(TranslationMode.OFFLINE, state.selectedMode)
+        assertEquals(ModelType.OFFLINE, state.selectedUnifiedModel?.type)
+        assertEquals("HY-MT 1.5B", state.selectedUnifiedModel?.displayName)
+    }
+
+    @Test
+    fun `图片OCR成功后写入识别文本`() = runTest {
+        val viewModel = TranslateViewModel(
+            repository = FakeTranslationRepository(),
+            imageTextRecognizer = FakeImageTextRecognizer("hello\n你好"),
+        )
+
+        viewModel.openImageTranslator("content://test/image", "相册导入")
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertTrue(state.isImageTranslatorOpen)
+        assertFalse(state.isImageRecognizing)
+        assertEquals("hello\n你好", state.imageRecognizedText)
+        assertEquals("已识别图片文字，可编辑后翻译", state.imageInfoMessage)
+    }
+
+    @Test
+    fun `图片OCR为空时显示错误且不会触发翻译`() = runTest {
+        val repository = FakeTranslationRepository()
+        val viewModel = TranslateViewModel(
+            repository = repository,
+            imageTextRecognizer = FakeImageTextRecognizer("   "),
+        )
+
+        viewModel.openImageTranslator("content://test/blank", "拍照翻译")
+        advanceUntilIdle()
+        viewModel.translateImageText()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals("请先识别或输入要翻译的图片文字", state.imageErrorMessage)
+        assertEquals(null, repository.lastTranslateMode)
+    }
+
+    @Test
+    fun `图片翻译使用当前语言和模型模式`() = runTest {
+        val repository = FakeTranslationRepository(
+            initialSettings = AppSettings(defaultMode = TranslationMode.CLOUD),
+        )
+        val viewModel = TranslateViewModel(
+            repository = repository,
+            imageTextRecognizer = FakeImageTextRecognizer("hi"),
+        )
+        advanceUntilIdle()
+
+        viewModel.openImageTranslator("content://test/photo", "相册导入")
+        advanceUntilIdle()
+        viewModel.translateImageText()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals("你好", state.imageTranslatedText)
+        assertEquals(TranslationMode.CLOUD, repository.lastTranslateMode)
+        assertEquals("hi", repository.lastTranslateRequest?.sourceText)
+        assertEquals("中文（简体）", repository.lastTranslateRequest?.targetLanguage?.displayName)
+    }
+
+    @Test
+    fun `图片翻译带入首页会同步原文和译文`() = runTest {
+        val viewModel = TranslateViewModel(
+            repository = FakeTranslationRepository(),
+            imageTextRecognizer = FakeImageTextRecognizer("hi"),
+        )
+
+        viewModel.openImageTranslator("content://test/photo", "相册导入")
+        advanceUntilIdle()
+        viewModel.translateImageText()
+        advanceUntilIdle()
+        viewModel.bringImageTranslationToHome()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isImageTranslatorOpen)
+        assertEquals("hi", state.sourceText)
+        assertEquals("你好", state.translatedText)
+        assertEquals("已带入首页", state.infoMessage)
+    }
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -121,21 +254,37 @@ class MainDispatcherRule(
 }
 
 private class FakeTranslationRepository(
+    initialSettings: AppSettings = AppSettings(),
     private val appUpdateResult: AppUpdateCheckResult = AppUpdateCheckResult.UpToDate("1.0.0"),
     private val downloadedUpdateFile: File = File("build/tmp/fake-update.apk"),
 ) : TranslationRepositoryContract {
-    override val settings: Flow<AppSettings> = MutableStateFlow(AppSettings())
+    private val settingsFlow = MutableStateFlow(initialSettings)
+    override val settings: Flow<AppSettings> = settingsFlow
     override val history: Flow<List<TranslationHistoryEntity>> = MutableStateFlow(emptyList())
     override val modelState: Flow<ModelState> = MutableStateFlow(ModelState())
+    var updatedDefaultMode: TranslationMode? = null
+        private set
+    var updatedModelName: String? = null
+        private set
+    var lastTranslateMode: TranslationMode? = null
+        private set
+    var lastTranslateRequest: TranslateRequest? = null
+        private set
 
     override suspend fun updateBaseUrl(value: String) = Unit
     override suspend fun updateApiKey(value: String) = Unit
-    override suspend fun updateModelName(value: String) = Unit
+    override suspend fun updateModelName(value: String) {
+        updatedModelName = value
+        settingsFlow.value = settingsFlow.value.copy(modelName = value)
+    }
     override suspend fun updateCustomModelNames(values: List<String>) = Unit
     override suspend fun updateProviderName(value: String) = Unit
     override suspend fun selectCloudProvider(providerId: String) = Unit
     override suspend fun addCloudProvider(provider: CloudProviderSettings) = Unit
-    override suspend fun updateDefaultMode(value: TranslationMode) = Unit
+    override suspend fun updateDefaultMode(value: TranslationMode) {
+        updatedDefaultMode = value
+        settingsFlow.value = settingsFlow.value.copy(defaultMode = value)
+    }
     override suspend fun fetchCloudModels(settings: AppSettings): List<String> = emptyList()
     override suspend fun checkAppUpdate(currentVersionCode: Int): AppUpdateCheckResult = appUpdateResult
     override suspend fun downloadAppUpdate(
@@ -146,6 +295,8 @@ private class FakeTranslationRepository(
         return downloadedUpdateFile
     }
     override suspend fun translate(request: TranslateRequest, mode: TranslationMode): TranslateOutput {
+        lastTranslateMode = mode
+        lastTranslateRequest = request
         return TranslateOutput(translatedText = "你好", usedMode = mode)
     }
     override suspend fun downloadModel() = Unit
@@ -153,4 +304,10 @@ private class FakeTranslationRepository(
     override fun refreshModelState() = Unit
     override suspend fun deleteHistory(entity: TranslationHistoryEntity) = Unit
     override suspend fun clearHistory() = Unit
+}
+
+private class FakeImageTextRecognizer(
+    private val text: String,
+) : ImageTextRecognizerContract {
+    override suspend fun recognize(uriString: String): String = text
 }

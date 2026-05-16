@@ -72,7 +72,7 @@ app/build/outputs/apk/debug/app-debug.apk
 - Bucket：`ai-translate-assets`
 - 正式域名：`https://download.204152.xyz`
 - 更新清单：`https://download.204152.xyz/releases/latest.json`
-- Debug 测试包示例：`https://download.204152.xyz/releases/ai-translate-1.0.2-debug.apk`
+- Debug 测试包示例：`https://download.204152.xyz/releases/ai-translate-1.0.3-debug.apk`
 
 后续 Debug 测试发版可执行：
 
@@ -119,7 +119,7 @@ docs/
 
 - `testDebugUnitTest`：最近任务记录中通过。
 - `assembleDebug`：最近任务记录中通过。
-- R2 更新清单：`https://download.204152.xyz/releases/latest.json` 当前可访问；1.0.2 Debug 更新包由 `scripts/publish-r2-debug-update.ps1` 上传，最新 SHA256 为 `C692F0798AAA54E0AD7D020D9C8F4F5611267CCDCBC788D03EC84295C88EDCF4`。
+- R2 更新清单：`https://download.204152.xyz/releases/latest.json` 当前可访问；1.0.3 Debug 更新包由 `scripts/publish-r2-debug-update.ps1` 上传，大小 `187507940` 字节，SHA256 为 `AA4A7EB54D2A7742B0AEB39D677B8916DF283977863579E7F1353FC624E529D2`。
 - 系统文本朗读：1.0.2 已补齐 TTS 引擎检测、语音包安装入口、系统设置修复入口和语言候选回退。
 - Q4_K_M 离线翻译：已在真机验证，`hi` 可翻译为 `嗨`。
 - 系统划词/分享、剪贴板提示、悬浮球：代码与构建产物已就绪；悬浮球已在 Chrome 真机验证，不会再跳回 AI 翻译主界面。

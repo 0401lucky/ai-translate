@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.mxwis.aitranslate.data.history.AppDatabase
 import com.mxwis.aitranslate.data.model.HyMtModelManager
+import com.mxwis.aitranslate.data.ocr.MlKitImageTextRecognizer
 import com.mxwis.aitranslate.data.settings.SettingsStore
 import com.mxwis.aitranslate.data.translation.CloudTranslationEngine
 import com.mxwis.aitranslate.data.translation.OfflineTranslationEngine
@@ -29,6 +30,7 @@ class AppContainer(context: Context) {
 
     private val settingsStore = SettingsStore(appContext)
     private val modelManager = HyMtModelManager(appContext, httpClient)
+    val imageTextRecognizer = MlKitImageTextRecognizer(appContext)
 
     val repository = TranslationRepository(
         settingsStore = settingsStore,

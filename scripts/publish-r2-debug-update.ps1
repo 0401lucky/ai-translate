@@ -1,13 +1,13 @@
 param(
-    [int]$VersionCode = 3,
-    [string]$VersionName = "1.0.2",
+    [int]$VersionCode = 4,
+    [string]$VersionName = "1.0.3",
     [string]$Bucket = "ai-translate-assets",
     [string]$PublicBaseUrl = "https://download.204152.xyz",
-    [string]$ApkObjectKey = "releases/ai-translate-1.0.2-debug.apk",
+    [string]$ApkObjectKey = "releases/ai-translate-1.0.3-debug.apk",
     [string[]]$Notes = @(
-        "修复系统文本朗读初始化失败后只提示不可用的问题。",
-        "新增文本朗读状态检测、重试、语音包安装和系统设置修复入口。",
-        "朗读语言支持候选回退，覆盖主界面、快速翻译、历史详情和悬浮翻译窗。"
+        "修复翻译页模型选择状态不一致的问题，重启后界面与实际翻译模型保持同步。",
+        "新增拍照翻译和相册导入翻译，使用本地 OCR 识别图片文字后复用现有翻译流程。",
+        "翻译首页改为更轻量的有道式结构，工具入口收纳到右上角工具箱弹窗。"
     )
 )
 
