@@ -384,3 +384,26 @@
 - [x] 执行 R2 发版脚本并验证公开更新清单。
 - [x] 提交并推送 GitHub。
 - [x] 回写验证结果到 Task 文档。
+
+## 2026-05-17：内置离线英汉词典首版
+
+- [x] 明确完成标准：内置精简 ECDICT、离线查词、详情展示、建议词、测试和构建通过。
+- [x] 搜索 GitHub 词库并确认首版采用 MIT 许可的 `skywind3000/ECDICT`。
+- [x] 更新 `docs/task文档.md`，新增 Task 031。
+- [x] 使用 imagegen 生成词典页设计图并保存到 `docs/ui/dictionary-lookup-design.png`。
+- [x] 生成精简 ECDICT 内置资源和许可证说明。
+- [x] 实现本地词典查询封装、ViewModel 状态和词典页 UI。
+- [x] 增加单元测试。
+- [x] 运行 Kotlin 编译、单元测试和 Debug APK 构建。
+- [x] 回写验证结果到 Task 文档。
+- [ ] 模拟器启动后补充词典页设备截图验证。
+
+## 2026-05-17：发布 1.0.4 内置词典更新包
+
+- [x] 明确完成标准：版本号 1.0.4 (5)、R2 latest.json 指向新版、构建测试完成验证、GitHub 推送完成。
+- [x] 更新 `docs/task文档.md`，新增 Task 032。
+- [x] 更新 App 默认版本号和 R2 发版脚本。
+- [x] 运行 Kotlin 编译、单元测试和 Debug 构建。
+- [x] 执行 R2 发版脚本并验证公开更新清单。
+- [x] 提交并推送 GitHub。
+- [x] 回写验证结果到 Task 文档。

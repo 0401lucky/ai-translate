@@ -2,6 +2,7 @@ package com.mxwis.aitranslate.di
 
 import android.content.Context
 import androidx.room.Room
+import com.mxwis.aitranslate.data.dictionary.AssetDictionaryRepository
 import com.mxwis.aitranslate.data.history.AppDatabase
 import com.mxwis.aitranslate.data.model.HyMtModelManager
 import com.mxwis.aitranslate.data.ocr.MlKitImageTextRecognizer
@@ -31,6 +32,7 @@ class AppContainer(context: Context) {
     private val settingsStore = SettingsStore(appContext)
     private val modelManager = HyMtModelManager(appContext, httpClient)
     val imageTextRecognizer = MlKitImageTextRecognizer(appContext)
+    val dictionaryRepository = AssetDictionaryRepository(appContext)
 
     val repository = TranslationRepository(
         settingsStore = settingsStore,

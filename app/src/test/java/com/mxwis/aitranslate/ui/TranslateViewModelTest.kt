@@ -1,6 +1,11 @@
 package com.mxwis.aitranslate.ui
 
 import com.mxwis.aitranslate.data.history.TranslationHistoryEntity
+import com.mxwis.aitranslate.data.dictionary.DictionaryEntry
+import com.mxwis.aitranslate.data.dictionary.DictionaryInflection
+import com.mxwis.aitranslate.data.dictionary.DictionaryLookupResult
+import com.mxwis.aitranslate.data.dictionary.DictionaryRepositoryContract
+import com.mxwis.aitranslate.data.dictionary.DictionaryWordSummary
 import com.mxwis.aitranslate.data.model.ModelState
 import com.mxwis.aitranslate.data.ocr.ImageTextRecognizerContract
 import com.mxwis.aitranslate.data.settings.AppSettings
@@ -238,6 +243,55 @@ class TranslateViewModelTest {
         assertEquals("你好", state.translatedText)
         assertEquals("已带入首页", state.infoMessage)
     }
+
+    @Test
+    fun `词典精确查询会写入单词详情`() = runTest {
+        val viewModel = TranslateViewModel(
+            repository = FakeTranslationRepository(),
+            dictionaryRepository = FakeDictionaryRepository(),
+        )
+
+        viewModel.updateDictionaryQuery("reason")
+        viewModel.lookupDictionary()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals("reason", state.dictionaryEntry?.word)
+        assertEquals("n. 原因；理由；理性", state.dictionaryEntry?.translations?.first())
+        assertEquals("reasons", state.dictionaryEntry?.inflections?.first()?.value)
+        assertEquals(null, state.dictionaryErrorMessage)
+    }
+
+    @Test
+    fun `词典查询会忽略大小写`() = runTest {
+        val viewModel = TranslateViewModel(
+            repository = FakeTranslationRepository(),
+            dictionaryRepository = FakeDictionaryRepository(),
+        )
+
+        viewModel.updateDictionaryQuery("Reason")
+        viewModel.lookupDictionary()
+        advanceUntilIdle()
+
+        assertEquals("reason", viewModel.uiState.value.dictionaryEntry?.word)
+    }
+
+    @Test
+    fun `词典未命中时显示建议词`() = runTest {
+        val viewModel = TranslateViewModel(
+            repository = FakeTranslationRepository(),
+            dictionaryRepository = FakeDictionaryRepository(),
+        )
+
+        viewModel.updateDictionaryQuery("rea")
+        viewModel.lookupDictionary()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(null, state.dictionaryEntry)
+        assertEquals("未找到该单词，试试相近词", state.dictionaryMessage)
+        assertEquals(listOf("reason", "real"), state.dictionarySuggestions.map { it.word })
+    }
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -310,4 +364,53 @@ private class FakeImageTextRecognizer(
     private val text: String,
 ) : ImageTextRecognizerContract {
     override suspend fun recognize(uriString: String): String = text
+}
+
+private class FakeDictionaryRepository : DictionaryRepositoryContract {
+    private val entries = listOf(
+        DictionaryEntry(
+            word = "reason",
+            phonetic = "'ri:zn",
+            definitions = listOf("a cause, explanation, or justification"),
+            translations = listOf("n. 原因；理由；理性"),
+            partOfSpeech = "n.",
+            tags = listOf("CET4", "考研"),
+            collins = 5,
+            oxford = true,
+            bncRank = 310,
+            frequencyRank = 359,
+            inflections = listOf(DictionaryInflection("复数", "reasons")),
+        ),
+        DictionaryEntry(
+            word = "real",
+            phonetic = "ri:l",
+            definitions = listOf("being or occurring in fact"),
+            translations = listOf("a. 真实的；实际的"),
+            partOfSpeech = "a.",
+            tags = listOf("CET4"),
+            collins = 5,
+            oxford = true,
+            bncRank = 200,
+            frequencyRank = 180,
+            inflections = emptyList(),
+        ),
+    )
+
+    override suspend fun lookup(query: String): DictionaryLookupResult {
+        val normalized = query.trim().lowercase()
+        val entry = entries.firstOrNull { it.word == normalized }
+        return DictionaryLookupResult(
+            query = normalized,
+            entry = entry,
+            suggestions = suggest(normalized, 8).filterNot { it.word == entry?.word },
+        )
+    }
+
+    override suspend fun suggest(prefix: String, limit: Int): List<DictionaryWordSummary> {
+        val normalized = prefix.trim().lowercase()
+        return entries
+            .filter { normalized.isBlank() || it.word.startsWith(normalized) }
+            .take(limit)
+            .map { DictionaryWordSummary(it.word, it.translations.first()) }
+    }
 }

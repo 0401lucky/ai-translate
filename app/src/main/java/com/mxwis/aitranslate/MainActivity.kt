@@ -21,6 +21,7 @@ class MainActivity : ComponentActivity() {
                 TranslateViewModel(
                     repository = repository,
                     imageTextRecognizer = (application as AiTranslateApplication).container.imageTextRecognizer,
+                    dictionaryRepository = (application as AiTranslateApplication).container.dictionaryRepository,
                 )
             }
         }

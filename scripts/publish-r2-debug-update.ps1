@@ -1,13 +1,13 @@
 param(
-    [int]$VersionCode = 4,
-    [string]$VersionName = "1.0.3",
+    [int]$VersionCode = 5,
+    [string]$VersionName = "1.0.4",
     [string]$Bucket = "ai-translate-assets",
     [string]$PublicBaseUrl = "https://download.204152.xyz",
-    [string]$ApkObjectKey = "releases/ai-translate-1.0.3-debug.apk",
+    [string]$ApkObjectKey = "releases/ai-translate-1.0.4-debug.apk",
     [string[]]$Notes = @(
-        "修复翻译页模型选择状态不一致的问题，重启后界面与实际翻译模型保持同步。",
-        "新增拍照翻译和相册导入翻译，使用本地 OCR 识别图片文字后复用现有翻译流程。",
-        "翻译首页改为更轻量的有道式结构，工具入口收纳到右上角工具箱弹窗。"
+        "新增离线英汉词典页，支持搜索英文单词并查看详细释义。",
+        "内置 20000 条 ECDICT 常用词，包含音标、中文释义、英文解释、词形变化和词频信息。",
+        "词典查询完全本地完成，无需联网。"
     )
 )
 

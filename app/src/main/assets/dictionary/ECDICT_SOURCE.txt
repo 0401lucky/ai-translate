@@ -1,0 +1,7 @@
+ECDICT essential subset
+Source: https://github.com/skywind3000/ECDICT
+Source file: ecdict.csv
+Source SHA from GitHub API: c4ade63ea08cf39d9c3475e96929036d64d94c94
+Selected entries: 20000
+Selection: single English words with Chinese translation, ranked by Collins/Oxford/tags/frequency, plus required app examples.
+License: MIT, see ECDICT_LICENSE.txt.

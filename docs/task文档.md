@@ -1103,4 +1103,98 @@
 - 已执行 `.\scripts\publish-r2-debug-update.ps1`，上传 `releases/ai-translate-1.0.3-debug.apk` 和 `releases/latest.json`。
 - R2 manifest GET 返回 200，APK HEAD 返回 200，APK 公开大小为 `187507940` 字节。
 - R2 manifest 已写入 SHA256：`AA4A7EB54D2A7742B0AEB39D677B8916DF283977863579E7F1353FC624E529D2`。
-- 本次发布改动将提交并推送到 GitHub `main` 分支。
+- 本次发布改动已提交并推送到 GitHub `main` 分支。
+
+## Task 031：内置离线英汉词典首版
+
+### 目标
+
+在 App 内置一个许可证清晰、体积可控的英汉词库，让用户除了翻译句子，也能离线搜索英文单词并查看详细释义、音标、词性、考试标签、词频和词形变化。
+
+### 词库调研结论
+
+- 首版采用 GitHub `skywind3000/ECDICT`，仓库说明为英汉双解词典数据库，许可证为 MIT。
+- ECDICT 完整 CSV 约 66MB，直接内置会继续推高 APK 体积；首版从完整 CSV 裁剪常用词子集。
+- `ecdict.mini.csv` 只有约 4KB，是示例数据，不适合作为真实内置词库。
+- 暂不采用 CC-CEDICT 作为首版内置来源，因为它主要是汉英词典，且 CC BY-SA 授权对 App 分发和衍生数据有额外共享要求。
+
+### 范围
+
+- 生成词典页设计图并保存到 `docs/ui/dictionary-lookup-design.png`。
+- 新增精简 ECDICT 内置资源和许可证说明。
+- 新增本地词典查询封装，支持精确匹配、大小写归一化和前缀建议。
+- 新增底部“词典”页，提供搜索框、单词详情、空状态和建议词列表。
+- 单词详情展示音标、中文释义、英文释义、标签、词频和词形变化。
+
+### 不包含
+
+- 不内置完整 66MB ECDICT 数据库。
+- 不做中英双向完整词典检索。
+- 不新增在线词典 API。
+- 不实现生词本、背词计划或发音音频下载。
+
+### 完成标准
+
+- App 可离线查询内置常用英文单词。
+- 查询结果包含中文释义和至少一种辅助信息（音标、英文释义、标签或词形变化）。
+- 未命中时显示明确提示和相近建议。
+- 单元测试覆盖精确查询、大小写查询和未命中建议。
+- Kotlin 编译、单元测试和 Debug APK 构建通过。
+
+### 验证记录
+
+- 已使用 imagegen 生成词典页设计图：`docs/ui/dictionary-lookup-design.png`。
+- 已从 ECDICT 完整 CSV 生成 20000 条常用英文单词子集：`app/src/main/assets/dictionary/ecdict_essential.tsv`。
+- 已随包内置 ECDICT MIT 许可证和来源说明：`ECDICT_LICENSE.txt`、`ECDICT_SOURCE.txt`。
+- APK 内确认包含词典资源，`ecdict_essential.tsv` 原始大小 `4582257` 字节，APK 内压缩后约 `2330238` 字节。
+- 已确认内置词库包含 `reason`、`hello`、`dictionary` 等常用词。
+- 已新增本地词典查询封装、底部“词典”页、搜索框、详情卡片、建议词列表和空状态。
+- 已新增 ViewModel 单元测试，覆盖精确查询、大小写查询和未命中建议。
+- `.\gradlew.bat :app:compileDebugKotlin --no-daemon --console=plain`：通过。
+- `.\gradlew.bat testDebugUnitTest --no-daemon --console=plain`：命令超过 60 秒上限被截断；测试结果 XML 显示 8 个测试类共 42 个测试均为 0 failure / 0 error。
+- `.\gradlew.bat :app:testDebugUnitTest --tests "com.mxwis.aitranslate.ui.TranslateViewModelTest" --no-daemon --console=plain`：命令超过 60 秒上限被截断；对应测试结果 XML 显示 12 个测试均为 0 failure / 0 error。
+- `.\gradlew.bat :app:assembleDebug --no-daemon --console=plain`：通过。
+- 当前尝试启动 `Pixel_9_Pro` 模拟器进行截图验证，但设备停留在 `offline`，已关闭卡住的模拟器进程；设备侧点击截图待模拟器正常后补充。
+
+## Task 032：发布 1.0.4 内置词典更新包
+
+### 目标
+
+将内置离线英汉词典首版整理为 `1.0.4` Debug 更新包，上传到 Cloudflare R2 内置更新通道，并提交推送到 GitHub。
+
+### 范围
+
+- 将默认版本提升为 `versionCode = 5`、`versionName = 1.0.4`。
+- 更新 R2 Debug 发版脚本默认版本、APK 对象路径和更新说明。
+- 运行 Kotlin 编译、单元测试、Debug APK 构建。
+- 执行 R2 发版脚本，生成并上传 `releases/ai-translate-1.0.4-debug.apk` 和 `releases/latest.json`。
+- 验证公开更新清单和 APK 可访问。
+- 提交并推送 GitHub。
+
+### 不包含
+
+- 不配置正式 release keystore。
+- 不发布 Google Play / 应用商店版本。
+- 不继续扩大内置词库规模。
+- 不新增在线词典 API。
+
+### 完成标准
+
+- App 默认版本号为 `1.0.4 (5)`。
+- R2 `releases/latest.json` 指向 `1.0.4` Debug APK。
+- APK 大小和 SHA256 写入 manifest 并通过公开访问校验。
+- 构建和单元测试完成验证。
+- GitHub `main` 分支收到本次发布提交。
+
+### 验证记录
+
+- 已将默认版本号提升为 `versionCode = 5`、`versionName = 1.0.4`。
+- 已更新 `scripts/publish-r2-debug-update.ps1`，默认发布 `releases/ai-translate-1.0.4-debug.apk`。
+- 已通过 `.\gradlew.bat :app:compileDebugKotlin --no-daemon --console=plain`。
+- 已通过 `.\gradlew.bat testDebugUnitTest --no-daemon --console=plain`，耗时 25 秒。
+- 已通过 `.\gradlew.bat :app:assembleDebug --no-daemon --console=plain`。
+- 已执行 `.\scripts\publish-r2-debug-update.ps1`，上传 `releases/ai-translate-1.0.4-debug.apk` 和 `releases/latest.json`。
+- R2 manifest GET 返回 200，APK HEAD 返回 200，APK 公开大小为 `192197321` 字节。
+- R2 manifest 已写入 SHA256：`9D23DC42093334EEDDAFECE3A5A7A156FDEC5B2FF4785BD33F72072EB2F9721F`。
+- `app/build/outputs/apk/debug/output-metadata.json` 已确认 `versionCode = 5`、`versionName = 1.0.4`。
+- 本次发布改动已提交并推送到 GitHub `main` 分支。

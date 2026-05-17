@@ -3,11 +3,14 @@ package com.mxwis.aitranslate.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mxwis.aitranslate.BuildConfig
-import com.mxwis.aitranslate.data.settings.CloudProviderSettings
+import com.mxwis.aitranslate.data.dictionary.DictionaryEntry
+import com.mxwis.aitranslate.data.dictionary.DictionaryRepositoryContract
+import com.mxwis.aitranslate.data.dictionary.DictionaryWordSummary
 import com.mxwis.aitranslate.data.history.TranslationHistoryEntity
 import com.mxwis.aitranslate.data.model.ModelState
 import com.mxwis.aitranslate.data.ocr.ImageTextRecognizerContract
 import com.mxwis.aitranslate.data.settings.AppSettings
+import com.mxwis.aitranslate.data.settings.CloudProviderSettings
 import com.mxwis.aitranslate.data.settings.DEFAULT_MODEL_NAME
 import com.mxwis.aitranslate.data.translation.TranslationRepositoryContract
 import com.mxwis.aitranslate.data.update.AppUpdateCheckResult
@@ -27,6 +30,7 @@ import kotlinx.coroutines.launch
 
 enum class AppSection(val label: String) {
     TRANSLATE("翻译"),
+    DICTIONARY("词典"),
     HISTORY("历史"),
     SETTINGS("设置"),
 }
@@ -88,11 +92,18 @@ data class TranslateUiState(
     val isImageTranslating: Boolean = false,
     val imageErrorMessage: String? = null,
     val imageInfoMessage: String? = null,
+    val dictionaryQuery: String = "",
+    val dictionaryEntry: DictionaryEntry? = null,
+    val dictionarySuggestions: List<DictionaryWordSummary> = emptyList(),
+    val isDictionaryLoading: Boolean = false,
+    val dictionaryMessage: String? = null,
+    val dictionaryErrorMessage: String? = null,
 )
 
 class TranslateViewModel(
     private val repository: TranslationRepositoryContract,
     private val imageTextRecognizer: ImageTextRecognizerContract? = null,
+    private val dictionaryRepository: DictionaryRepositoryContract? = null,
     private val currentVersionCode: Int = BuildConfig.VERSION_CODE,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(TranslateUiState())
@@ -152,6 +163,89 @@ class TranslateViewModel(
 
     fun selectSection(section: AppSection) {
         _uiState.update { it.copy(currentSection = section, errorMessage = null, infoMessage = null) }
+        if (section == AppSection.DICTIONARY && _uiState.value.dictionarySuggestions.isEmpty()) {
+            refreshDictionarySuggestions()
+        }
+    }
+
+    fun updateDictionaryQuery(value: String) {
+        _uiState.update {
+            it.copy(
+                dictionaryQuery = value,
+                dictionaryErrorMessage = null,
+                dictionaryMessage = null,
+            )
+        }
+        refreshDictionarySuggestions()
+    }
+
+    fun lookupDictionary(query: String = _uiState.value.dictionaryQuery) {
+        val normalized = query.trim()
+        val dictionary = dictionaryRepository
+        if (dictionary == null) {
+            _uiState.update { it.copy(dictionaryErrorMessage = "离线词典模块不可用") }
+            return
+        }
+        if (normalized.isBlank()) {
+            _uiState.update {
+                it.copy(
+                    dictionaryEntry = null,
+                    dictionaryErrorMessage = "请输入要查询的英文单词",
+                    dictionaryMessage = null,
+                )
+            }
+            refreshDictionarySuggestions()
+            return
+        }
+
+        _uiState.update {
+            it.copy(
+                dictionaryQuery = normalized,
+                isDictionaryLoading = true,
+                dictionaryErrorMessage = null,
+                dictionaryMessage = null,
+            )
+        }
+        viewModelScope.launch {
+            runCatching { dictionary.lookup(normalized) }
+                .onSuccess { result ->
+                    _uiState.update {
+                        it.copy(
+                            dictionaryQuery = result.entry?.word ?: normalized,
+                            dictionaryEntry = result.entry,
+                            dictionarySuggestions = result.suggestions,
+                            isDictionaryLoading = false,
+                            dictionaryMessage = if (result.entry == null) "未找到该单词，试试相近词" else null,
+                            dictionaryErrorMessage = null,
+                        )
+                    }
+                }
+                .onFailure { error ->
+                    _uiState.update {
+                        it.copy(
+                            isDictionaryLoading = false,
+                            dictionaryEntry = null,
+                            dictionaryErrorMessage = error.message ?: "词典查询失败",
+                        )
+                    }
+                }
+        }
+    }
+
+    fun chooseDictionarySuggestion(word: String) {
+        _uiState.update { it.copy(dictionaryQuery = word) }
+        lookupDictionary(word)
+    }
+
+    private fun refreshDictionarySuggestions() {
+        val dictionary = dictionaryRepository ?: return
+        val query = _uiState.value.dictionaryQuery
+        viewModelScope.launch {
+            runCatching { dictionary.suggest(query, limit = 8) }
+                .onSuccess { suggestions ->
+                    _uiState.update { it.copy(dictionarySuggestions = suggestions) }
+                }
+        }
     }
 
     fun updateSourceText(value: String) {

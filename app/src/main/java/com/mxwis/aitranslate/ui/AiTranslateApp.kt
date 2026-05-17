@@ -44,6 +44,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -126,6 +127,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.mxwis.aitranslate.data.dictionary.DictionaryEntry
+import com.mxwis.aitranslate.data.dictionary.DictionaryWordSummary
 import com.mxwis.aitranslate.data.history.TranslationHistoryEntity
 import com.mxwis.aitranslate.data.settings.CloudProviderSettings
 import com.mxwis.aitranslate.domain.LanguageOption
@@ -195,6 +198,9 @@ fun AiTranslateApp(viewModel: TranslateViewModel) {
             onTranslateImageText = viewModel::translateImageText,
             onCloseImageTranslator = viewModel::closeImageTranslator,
             onBringImageTranslationToHome = viewModel::bringImageTranslationToHome,
+            onDictionaryQueryChanged = viewModel::updateDictionaryQuery,
+            onLookupDictionary = viewModel::lookupDictionary,
+            onChooseDictionarySuggestion = viewModel::chooseDictionarySuggestion,
         )
     }
 }
@@ -248,6 +254,9 @@ private fun AiTranslateContent(
     onTranslateImageText: () -> Unit,
     onCloseImageTranslator: () -> Unit,
     onBringImageTranslationToHome: () -> Unit,
+    onDictionaryQueryChanged: (String) -> Unit,
+    onLookupDictionary: () -> Unit,
+    onChooseDictionarySuggestion: (String) -> Unit,
 ) {
     val clipboard = LocalClipboardManager.current
     val context = LocalContext.current
@@ -360,6 +369,12 @@ private fun AiTranslateContent(
                     onSpeakSource = { speakText(state.sourceText, state.sourceLanguage) },
                     onSpeakTranslation = { speakText(state.translatedText, state.targetLanguage) },
                     onOpenUnifiedModelPicker = onOpenUnifiedModelPicker,
+                )
+                AppSection.DICTIONARY -> DictionaryScreen(
+                    state = state,
+                    onQueryChanged = onDictionaryQueryChanged,
+                    onLookup = onLookupDictionary,
+                    onChooseSuggestion = onChooseDictionarySuggestion,
                 )
                 AppSection.HISTORY -> HistoryScreen(
                     histories = state.histories,
@@ -567,6 +582,12 @@ private fun AppBottomBar(
             onClick = { onSelected(AppSection.TRANSLATE) },
             icon = { Icon(Icons.Default.Translate, contentDescription = null) },
             label = { Text("翻译") },
+        )
+        NavigationBarItem(
+            selected = current == AppSection.DICTIONARY,
+            onClick = { onSelected(AppSection.DICTIONARY) },
+            icon = { Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = null) },
+            label = { Text("词典") },
         )
         NavigationBarItem(
             selected = current == AppSection.HISTORY,
@@ -2208,6 +2229,362 @@ private fun ModelPickerSheet(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(12.dp))
+    }
+}
+
+@Composable
+private fun DictionaryScreen(
+    state: TranslateUiState,
+    onQueryChanged: (String) -> Unit,
+    onLookup: () -> Unit,
+    onChooseSuggestion: (String) -> Unit,
+) {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.surface),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        item {
+            Text(
+                text = "离线词典",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+        item {
+            OutlinedTextField(
+                value = state.dictionaryQuery,
+                onValueChange = onQueryChanged,
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                shape = RoundedCornerShape(18.dp),
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                trailingIcon = {
+                    IconButton(onClick = onLookup) {
+                        Icon(Icons.Default.Search, contentDescription = "查词")
+                    }
+                },
+                label = { Text("搜索英文单词") },
+            )
+        }
+        if (state.isDictionaryLoading) {
+            item {
+                LinearProgressIndicator(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(50)),
+                )
+            }
+        }
+        if (state.dictionaryErrorMessage != null || state.dictionaryMessage != null) {
+            item {
+                MessageBanner(
+                    error = state.dictionaryErrorMessage,
+                    info = state.dictionaryMessage,
+                )
+            }
+        }
+        state.dictionaryEntry?.let { entry ->
+            item { DictionaryHeroCard(entry) }
+            if (entry.translations.isNotEmpty()) {
+                item {
+                    DictionaryDetailCard(
+                        title = "释义",
+                        accent = MaterialTheme.colorScheme.primary,
+                        lines = entry.translations.take(6),
+                    )
+                }
+            }
+            if (entry.definitions.isNotEmpty()) {
+                item {
+                    DictionaryDetailCard(
+                        title = "英文解释",
+                        accent = MaterialTheme.colorScheme.tertiary,
+                        lines = entry.definitions.take(4),
+                    )
+                }
+            }
+            if (entry.inflections.isNotEmpty()) {
+                item { DictionaryInflectionCard(entry.inflections) }
+            }
+            item {
+                DictionaryMetaCard(entry)
+            }
+        } ?: item {
+            DictionaryEmptyCard()
+        }
+
+        if (state.dictionarySuggestions.isNotEmpty()) {
+            item {
+                Text(
+                    text = "相近词",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+            items(state.dictionarySuggestions, key = { it.word }) { suggestion ->
+                DictionarySuggestionItem(
+                    suggestion = suggestion,
+                    onClick = { onChooseSuggestion(suggestion.word) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DictionaryHeroCard(entry: DictionaryEntry) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        color = Color(0xFFEAF8FC),
+        border = BorderStroke(1.dp, Color(0xFFCDEDF6)),
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = entry.word,
+                style = MaterialTheme.typography.displaySmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            if (entry.phonetic.isNotBlank()) {
+                Text(
+                    text = "英 /${entry.phonetic}/",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Text(
+                text = entry.translations.firstOrNull().orEmpty(),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                lineHeight = 26.sp,
+            )
+            DictionaryTagRow(entry)
+        }
+    }
+}
+
+@Composable
+private fun DictionaryTagRow(entry: DictionaryEntry) {
+    val tags = buildList {
+        addAll(entry.tags)
+        if (entry.oxford) add("Oxford")
+        if (entry.collins > 0) add("Collins ${entry.collins}")
+    }.take(5)
+    if (tags.isEmpty()) return
+
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        tags.forEach { tag ->
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.72f),
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            ) {
+                Text(
+                    text = tag,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DictionaryDetailCard(
+    title: String,
+    accent: Color,
+    lines: List<String>,
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .width(4.dp)
+                        .height(22.dp)
+                        .background(accent, RoundedCornerShape(4.dp)),
+                )
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+            lines.forEach { line ->
+                Text(
+                    text = line,
+                    style = MaterialTheme.typography.bodyLarge,
+                    lineHeight = 25.sp,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DictionaryInflectionCard(
+    inflections: List<com.mxwis.aitranslate.data.dictionary.DictionaryInflection>,
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(
+                text = "词形变化",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
+            inflections.take(6).forEach { item ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    Text(
+                        text = item.label,
+                        modifier = Modifier.width(92.dp),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        text = item.value,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DictionaryMetaCard(entry: DictionaryEntry) {
+    val meta = buildList {
+        if (entry.bncRank > 0) add("BNC 词频 #${entry.bncRank}")
+        if (entry.frequencyRank > 0) add("常用词频 #${entry.frequencyRank}")
+        if (entry.partOfSpeech.isNotBlank()) add("词性 ${entry.partOfSpeech}")
+    }
+    if (meta.isEmpty()) return
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Text(
+                text = "词库信息",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            meta.forEach {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DictionaryEmptyCard() {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.32f),
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = "搜索单词查看详细释义",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                text = "内置精简 ECDICT 英汉词库，可离线查看音标、释义、英文解释和词形变化。",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                lineHeight = 23.sp,
+            )
+        }
+    }
+}
+
+@Composable
+private fun DictionarySuggestionItem(
+    suggestion: DictionaryWordSummary,
+    onClick: () -> Unit,
+) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.MenuBook,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = suggestion.word,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                )
+                if (suggestion.translation.isNotBlank()) {
+                    Text(
+                        text = suggestion.translation,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+        }
     }
 }
 
