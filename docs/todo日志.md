@@ -449,5 +449,5 @@
 - [x] 执行 `testDebugUnitTest` 两次，均按 60 秒上限超时，未生成新的完整测试报告。
 - [x] 执行 R2 发版脚本，Debug 构建成功并上传 `1.0.5` APK 与 `latest.json`。
 - [x] 验证公开 APK 和更新清单返回 200，且清单指向 `1.0.5 (6)`。
-- [ ] 提交并推送 GitHub。
+- [x] 提交并推送 GitHub `main`。
 - [x] 回写验证结果到 Task 文档。

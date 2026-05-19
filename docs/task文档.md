@@ -1370,3 +1370,4 @@
 - 本地 `app/build/outputs/apk/debug/output-metadata.json` 已确认 `versionCode = 6`、`versionName = 1.0.5`。
 - R2 公网验证通过：APK 地址返回 200，`Content-Length = 189921447`；`https://download.204152.xyz/releases/latest.json` 返回 200 且指向 `1.0.5 (6)`。
 - SHA256：`639E94F916FD088A828BABB949CD52971CA0C3579FCA18FEE41E709B4C58642A`。
+- 本次发布改动已提交并推送到 GitHub `main` 分支。
