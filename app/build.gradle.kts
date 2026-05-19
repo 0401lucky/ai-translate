@@ -10,9 +10,9 @@ android {
 
     val resolvedVersionCode = providers.gradleProperty("appVersionCode")
         .map(String::toInt)
-        .getOrElse(5)
+        .getOrElse(6)
     val resolvedVersionName = providers.gradleProperty("appVersionName")
-        .getOrElse("1.0.4")
+        .getOrElse("1.0.5")
 
     defaultConfig {
         applicationId = "com.mxwis.aitranslate"

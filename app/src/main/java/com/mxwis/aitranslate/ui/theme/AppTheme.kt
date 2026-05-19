@@ -8,14 +8,26 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
 private val LightColors = lightColorScheme(
-    primary = Color(0xFF00897B),
+    primary = Color(0xFF5A5D94), // Sophisticated warm violet-indigo
     onPrimary = Color.White,
-    primaryContainer = Color(0xFFA7F1E7),
-    onPrimaryContainer = Color(0xFF00201C),
-    secondary = Color(0xFF546E7A),
-    background = Color(0xFFF7FAF9),
+    primaryContainer = Color(0xFFEEF0FF), // Soft lavender container
+    onPrimaryContainer = Color(0xFF1E214D),
+    secondary = Color(0xFF7A6854), // Warm brown/slate-beige
+    onSecondary = Color.White,
+    secondaryContainer = Color(0xFFF7F2EC),
+    onSecondaryContainer = Color(0xFF2C241B),
+    tertiary = Color(0xFF8B5CF6), // Sleek bright lavender
+    tertiaryContainer = Color(0xFFF3E8FF),
+    onTertiaryContainer = Color(0xFF3B0764),
+    background = Color(0xFFFAF9F6), // Warm beige/alabaster background, premium cream feel
     surface = Color.White,
-    error = Color(0xFFBA1A1A),
+    onSurface = Color(0xFF1F1F24), // Charcoal typography
+    onSurfaceVariant = Color(0xFF5D5C64),
+    outline = Color(0xFF79747E),
+    outlineVariant = Color(0xFFECECEF), // Extremely delicate divider/outline
+    error = Color(0xFFE11D48), // Vibrant rose error
+    errorContainer = Color(0xFFFFECEE),
+    onErrorContainer = Color(0xFF4C0519),
 )
 
 private val DarkColors = darkColorScheme(

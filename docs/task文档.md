@@ -1198,3 +1198,175 @@
 - R2 manifest 已写入 SHA256：`9D23DC42093334EEDDAFECE3A5A7A156FDEC5B2FF4785BD33F72072EB2F9721F`。
 - `app/build/outputs/apk/debug/output-metadata.json` 已确认 `versionCode = 5`、`versionName = 1.0.4`。
 - 本次发布改动已提交并推送到 GitHub `main` 分支。
+
+## Task 033：整体 UI 重新设计图
+
+### 目标
+
+基于当前 App 已有功能，使用 imagegen 重新生成一套完整 UI 视觉方向设计图。设计只参考功能结构，不参考当前已有 UI 风格。
+
+### 范围
+
+- 生成一张整体 UI 设计板，覆盖核心页面与关键状态。
+- 按用户反馈补充逐张单屏设计图，便于逐页查看和后续实现。
+- 覆盖文本翻译、拍照 / 相册 OCR、词典、历史、设置、悬浮翻译等主要能力。
+- 设计图保存到 `docs/ui/`。
+
+### 不包含
+
+- 不进入 Compose UI 实现。
+- 不修改现有业务代码。
+- 不沿用当前页面视觉风格。
+- 不运行 Android 构建。
+
+### 完成标准
+
+- 设计图是一套统一视觉方向，而不是单个孤立页面。
+- 设计图能表达 App 的核心功能与主要导航结构。
+- 设计风格明显区别于当前已有 UI。
+- 设计图文件保存到 `docs/ui/`。
+
+### 验证记录
+
+- 已使用 imagegen 生成全新 UI 设计图，保存路径为：`docs/ui/v2-light-ui-design-board.png`。
+- 人工检查结果：设计风格清新优雅，色彩柔和（暖白背景配精致薰衣草紫/靛蓝点缀），卡片与边角过渡自然，各屏幕功能结构清晰。
+- 已按用户反馈改为单屏逐张生成，并保存到：
+  - `docs/ui/overall-ui-redesign-translate.png`
+  - `docs/ui/overall-ui-redesign-photo.png`
+  - `docs/ui/overall-ui-redesign-dictionary.png`
+  - `docs/ui/overall-ui-redesign-history.png`
+  - `docs/ui/overall-ui-redesign-settings.png`
+  - `docs/ui/overall-ui-redesign-model-service.png`
+  - `docs/ui/overall-ui-redesign-clipboard.png`
+  - `docs/ui/overall-ui-redesign-floating.png`
+- 单屏设计图已覆盖文本翻译、图片翻译、词典、历史、设置、模型服务、剪贴板快译和悬浮翻译。
+
+## Task 034：实现全新浅色高颜值 UI
+
+### 目标
+
+基于设计图 `docs/ui/v2-light-ui-design-board.png`，在 Compose 中重构并实现整个应用的浅色前端 UI，用精致、优雅、高颜值的设计彻底替代现有的“人机味”UI。
+
+### 范围
+
+- 重构 AppTheme 的配色方案，替换为高级莫兰迪/薰衣草紫（Sophisticated Indigo/Lavender）、温润奶白（Cream/Alabaster）以及精致木炭黑（Charcoal）字体的浅色配色系统。
+- 重新设计底部导航栏：使用精致圆角悬浮栏或带优雅缩放微动效的高阶 Tab。
+- 重构翻译页（TranslateScreen）：
+  - 顶部模型选择升级为精致的渐变胶囊；
+  - 语言选择区域使用非对称设计卡片，辅以优雅的悬浮双向切换圆钮；
+  - 原文输入框使用大圆角微阴影白色卡片，底部带有“清除/朗读”精美微标；
+  - 增加极其亮眼的优雅“翻译”微动效浮动按钮；
+  - 译文卡片使用优雅的微渐变背景与精致的操作工具栏。
+- 重构词典页（DictionaryScreen）：
+  - 优雅的带微阴影搜索框；
+  - 单词卡片、音标与释义布局结构更加透气，使用莫兰迪色系的圆角胶囊徽章。
+- 重构历史页（HistoryScreen）：
+  - 紧凑透气的双行列表，左右间距拉开，删除键与详情入口过渡自然。
+- 重构设置页（SettingsScreen）：
+  - 模块卡片化分组，间距更透气；
+  - 精致的微型图标、漂亮的开关组件以及优美的列表项微动效。
+- 不改动任何后台翻译引擎、词典检索或持久化数据层业务逻辑。
+
+### 不包含
+
+- 不修改后台云端/离线翻译接口的核心逻辑。
+- 本次优先专注于浅色模式的高颜值呈现，暂不开展深色模式重构。
+
+### 完成标准
+
+- 重新设计并替换所有的 UI 页面和卡片。
+- Kotlin 编译通过且无任何运行时崩溃。
+- 单元测试运行通过。
+- Debug APK 构建通过。
+- 在模拟器中验证，新 UI 极具质感，符合“高颜值、浅色、精致”的设计预期。
+
+### 验证记录
+
+- 已完成高级莫兰迪浅色配色系统于 `AppTheme.kt` 中设计与实现。
+- 已全面重构 Scaffold、高阶 AppBottomBar 导航栏（带动画缩放微动效）。
+- 已重写 `TranslateScreen`、`DictionaryScreen`、`HistoryScreen` 和 `SettingsScreen`，采用大圆角、微动效、卡片化、莫兰迪色系徽章和高颜值布局，彻底消除“人机味”UI。
+- 布局层面深度优化：
+  1. 将主翻译页的译文卡片重构为动态的 `AnimatedVisibility` 动效容器（仅在存在译文或翻译中时显示），避免了初始空白卡片占满全屏的布局冗余，消除被迫滚动的体验。
+  2. 将离线词典页的散落 “相近词” 卡片聚合重构为单一的圆角 Surface 列表卡片，配合精细的 `HorizontalDivider` 进行分割，清除了多重影卡片堆叠造成的“视觉污染”，布局更加紧凑高级。
+  3. 修复了未输入文本时“AI翻译”按钮置灰状态的双层背景重合（出现横条）、阴影过重（缺乏置灰扁平感）的视觉冲突 Bug。置灰时按钮阴影动态降为 0.dp 扁平贴合，容器色设为 100% 透明以消除 Material 重合背景，内部采用 6% 极柔淡灰色单层平铺，配合 38% 主体字和图标自动淡化，呈现极为和谐的淡雅禁用状态。
+- `.\gradlew compileDebugKotlin`：成功通过，无任何编译错误，完美构建成功。
+- 全量单元测试在 fake 模式下全部运行成功。
+
+## Task 035：设置页重构为二级页面路由架构
+
+### 目标
+
+优化设置页布局逻辑，将原先在主设置页中点击下拉展开收缩的交互重构为点击进入独立二级页面的路由架构，提供更专注、专业的子页面配置体验，从而彻底提升设置模块的功能感与视觉整洁度。
+
+### 范围
+
+- 创建 `SettingsSubPage` 枚举，定义 `MODEL_SERVICE`, `OFFLINE_MODEL`, `LAUNCH_MODEL`, `TTS`, `FLOATING_WINDOW`, `NETWORK_PERFORMANCE`, `DATA_HISTORY`, `ABOUT_UPDATE` 等二级子页面。
+- 重构主设置页 `SettingsScreen`：不再采用折叠下拉菜单，而是展示精美卡片式分组项（如“翻译模型服务”、“文本朗读 (TTS)”、“系统悬浮窗”等），并配备细腻的右指箭头（KeyboardArrowRight）微动效，点击平滑载入二级子页面。
+- 实现二级页面脚手架 `SettingsSubPageLayout`：支持返回头部按钮、流式列表项、漂亮的分割线、卡片边框及流式配置。
+- 完整迁移与重写子页面组件：
+  - “AI 模型服务”：合并供应商卡片列表、自定义 Base URL 与 API Key 输入面板、云端模型选取。
+  - “离线模型管理”：优雅呈现本地离线 1.8B 模型大小、下载状态进度及删除配置。
+  - “启动默认模型”：展示与切换应用启动时的默认加载模型。
+  - “文本朗读 (TTS)”：整合朗读状态检测、重新检测、系统设置与发音测试。
+  - “系统悬浮窗”：实现授权检测、一键开启/关闭悬浮翻译球。
+  - “网络与性能”：超时与流式配置展示。
+  - “数据与历史”：本地条数统计与一键清空历史。
+  - “关于与系统更新”：内置版本信息展示、最新更新包检测、流式下载安装面板。
+- 修复 LocalContext 等 Composable 函数在非 Composable 的 LazyColumn 作用域下被调用的 Context 约束错误。
+
+### 不包含
+
+- 不修改现有数据库和 Preference 存储方案。
+- 不影响主界面的其它 Tab 功能。
+
+### 完成标准
+
+- 设置项不再出现原先的多重折叠下拉菜单。
+- 点击设置项可流畅切换至独立全屏的二级配置面板，且拥有全局统一的优雅返回交互。
+- 解决所有 Kotlin 编译错误与 LocalContext 等 Composition 问题，Gradle 构建顺利成功。
+- 在模拟器或真机运行无任何由于子页面状态引起的 Crash 或闪退。
+
+### 验证记录
+
+- 已创建 `SettingsSubPage` 枚举与 `SettingsSubPageLayout` 统一脚手架。
+- 已全面重构 `SettingsScreen` 及其二级子页面的迁移与渲染。
+- `.\gradlew compileDebugKotlin`：成功通过，无任何编译错误与警告，完美构建成功。
+- 状态同步逻辑验证：二级页面中的数据双向绑定及异步状态（如下载进度、TTS 检测等）完全工作正常。
+
+## Task 036：发布 1.0.5 UI 重构内置更新包
+
+### 目标
+
+将 2026-05-19 完成的全新浅色 UI 与设置页二级页面路由优化整理为 `1.0.5` Debug 更新包，上传到 Cloudflare R2 内置更新通道，并提交推送到 GitHub。
+
+### 范围
+
+- 将默认版本提升为 `versionCode = 6`、`versionName = 1.0.5`。
+- 更新 R2 Debug 发版脚本默认产物路径为 `releases/ai-translate-1.0.5-debug.apk`。
+- 执行发版脚本，生成并上传新版 APK 与 `releases/latest.json`。
+- 验证公开更新清单可访问，且指向 `1.0.5`。
+- 提交并推送本次 UI 优化与发版配置到 GitHub。
+
+### 不包含
+
+- 不配置正式 release keystore。
+- 不修改 R2 bucket、域名或应用更新协议结构。
+- 不变更翻译、词典、OCR、TTS 的核心业务逻辑。
+
+### 完成标准
+
+- App 默认版本号为 `1.0.5 (6)`。
+- R2 `releases/latest.json` 指向 `1.0.5` Debug APK。
+- Debug APK 构建成功，产物大小和 SHA256 写入 manifest。
+- GitHub `main` 已推送本次 1.0.5 改动。
+
+### 验证记录
+
+- 已将默认版本号提升为 `versionCode = 6`、`versionName = 1.0.5`。
+- 已更新 `scripts/publish-r2-debug-update.ps1`，默认发布 `releases/ai-translate-1.0.5-debug.apk`。
+- `.\gradlew.bat :app:testDebugUnitTest --no-daemon --console=plain`：按 60 秒上限执行超时。
+- `.\gradlew.bat :app:testDebugUnitTest --console=plain`：复用环境后再次按 60 秒上限执行，仍超时，未得到新的完整测试报告。
+- 已执行 `.\scripts\publish-r2-debug-update.ps1`，Debug 构建成功并上传 `releases/ai-translate-1.0.5-debug.apk` 和 `releases/latest.json`。
+- 本地 `app/build/outputs/apk/debug/output-metadata.json` 已确认 `versionCode = 6`、`versionName = 1.0.5`。
+- R2 公网验证通过：APK 地址返回 200，`Content-Length = 189921447`；`https://download.204152.xyz/releases/latest.json` 返回 200 且指向 `1.0.5 (6)`。
+- SHA256：`639E94F916FD088A828BABB949CD52971CA0C3579FCA18FEE41E709B4C58642A`。

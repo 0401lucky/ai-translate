@@ -1,13 +1,13 @@
 param(
-    [int]$VersionCode = 5,
-    [string]$VersionName = "1.0.4",
+    [int]$VersionCode = 6,
+    [string]$VersionName = "1.0.5",
     [string]$Bucket = "ai-translate-assets",
     [string]$PublicBaseUrl = "https://download.204152.xyz",
-    [string]$ApkObjectKey = "releases/ai-translate-1.0.4-debug.apk",
+    [string]$ApkObjectKey = "releases/ai-translate-1.0.5-debug.apk",
     [string[]]$Notes = @(
-        "新增离线英汉词典页，支持搜索英文单词并查看详细释义。",
-        "内置 20000 条 ECDICT 常用词，包含音标、中文释义、英文解释、词形变化和词频信息。",
-        "词典查询完全本地完成，无需联网。"
+        "重构全新浅色高颜值界面，翻译、词典、历史与设置页视觉全面升级。",
+        "设置页改为二级页面路由架构，模型服务、离线模型、TTS、悬浮窗和系统更新配置更清晰。",
+        "优化首页按钮、词典相近词卡片和禁用态细节，减少视觉重叠与无效空白。"
     )
 )
 

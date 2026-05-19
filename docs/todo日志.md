@@ -407,3 +407,47 @@
 - [x] 执行 R2 发版脚本并验证公开更新清单。
 - [x] 提交并推送 GitHub。
 - [x] 回写验证结果到 Task 文档。
+
+## 2026-05-19：整体 UI 重新设计图
+
+- [x] 明确完成标准：只生成一套整体 UI 设计图，不进入代码实现。
+- [x] 更新 `docs/task文档.md`，新增 Task 033。
+- [x] 使用 imagegen 生成全新整体 UI 设计图并保存到 `docs/ui/v2-light-ui-design-board.png`。
+- [x] 按用户反馈改为单屏逐张生成，并保存 8 张拆分设计图到 `docs/ui/`。
+- [x] 回写设计图保存路径和检查结果。
+
+## 2026-05-19：实现全新浅色高颜值 UI
+
+- [x] 明确完成标准：优雅浅色配色、非对称圆角布局、微动效微阴影、词典历史设置页全面重构、测试与构建通过。
+- [x] 更新 `docs/task文档.md`，新增 Task 034。
+- [x] 设计并实现高级莫兰迪/薰衣草紫浅色配色系统于 `AppTheme.kt`。
+- [x] 重构主界面 Scaffold 与 Bottom Bar 导航栏设计。
+- [x] 重写 `TranslateScreen` 实现精致的高颜值排版、语言卡片、微动效翻译浮动按钮和渐变背景。
+- [x] 重写 `DictionaryScreen` 呈现干净、高贵的单词卡片与柔和色调标签。
+- [x] 重写 `HistoryScreen` 采用优雅的双行排版及卡片微动效。
+- [x] 重写 `SettingsScreen` 采用精美的卡片式分组、精细控制开关和流畅交互。
+- [x] 优化布局细节：1. 翻译页空白译文卡片通过 AnimatedVisibility 智能折叠，节省屏幕空间并消除被迫滚动；2. 词典页多阴影“相近词”卡片合并为单一 Surface 组合卡片，配以 HorizontalDivider 分割，清除卡片重影杂乱；3. 修复了未输入文本时“AI翻译”按钮置灰状态的双层背景重合（横条）、阴影过重 Bug，使其呈现扁平且与浅色背景自然融入的淡雅禁用态。
+- [x] 运行编译、单元测试、Debug APK 构建及模拟器验证。
+- [x] 回写验证结果到 Task 文档。
+
+## 2026-05-19：设置页重构为二级页面路由架构
+
+- [x] 明确完成标准：设置页不再采用折叠下拉菜单，而是重构为优雅的二级页面跳转路由，每一项拥有独立全屏配置卡片与微交互。
+- [x] 更新 `docs/task文档.md`，新增 Task 035。
+- [x] 创建 `SettingsSubPage` 枚举，定义 `MODEL_SERVICE`, `OFFLINE_MODEL`, `LAUNCH_MODEL`, `TTS`, `FLOATING_WINDOW`, `NETWORK_PERFORMANCE`, `DATA_HISTORY`, `ABOUT_UPDATE` 等二级子页面。
+- [x] 在 `SettingsScreen` 中引入 `activeSubPage` 状态，实现精简的首级设置页面（分组卡片与漂亮的前进箭头）和支持平滑切换的二级页面架构。
+- [x] 开发 `SettingsSubPageLayout` 统一二级页面脚手架，包括返回头部、优雅导航栏和返回点击逻辑。
+- [x] 将所有原子配置模块迁移到对应的二级子页面中，修复 LocalContext 在 LazyColumn 非 Composable 作用域下的调用错误。
+- [x] 完成 Kotlin 编译和项目构建（Gradle compileDebugKotlin 顺利成功）。
+- [x] 回写验证结果到 Task 文档。
+
+## 2026-05-19：发布 1.0.5 UI 重构内置更新包
+
+- [x] 明确完成标准：版本号 1.0.5 (6)、R2 latest.json 指向新版、构建验证通过、GitHub 推送完成。
+- [x] 更新 `docs/task文档.md`，新增 Task 036。
+- [x] 更新 App 默认版本号和 R2 发版脚本默认参数。
+- [x] 执行 `testDebugUnitTest` 两次，均按 60 秒上限超时，未生成新的完整测试报告。
+- [x] 执行 R2 发版脚本，Debug 构建成功并上传 `1.0.5` APK 与 `latest.json`。
+- [x] 验证公开 APK 和更新清单返回 200，且清单指向 `1.0.5 (6)`。
+- [ ] 提交并推送 GitHub。
+- [x] 回写验证结果到 Task 文档。
