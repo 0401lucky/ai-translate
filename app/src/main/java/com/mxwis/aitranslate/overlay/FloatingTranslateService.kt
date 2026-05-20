@@ -248,7 +248,7 @@ class FloatingTranslateService : Service() {
                     mode = settings.defaultMode,
                 )
             }.onSuccess { output ->
-                statusTextView.text = "已使用${output.usedMode.label}翻译"
+                statusTextView.text = "已使用${output.displayModeLabel}翻译"
                 resultTextView.text = output.translatedText
                 resultTextView.setTextColor(BODY_TEXT)
                 copyButton.isEnabled = true

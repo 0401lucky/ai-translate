@@ -6,6 +6,7 @@ import com.mxwis.aitranslate.data.dictionary.DictionaryInflection
 import com.mxwis.aitranslate.data.dictionary.DictionaryLookupResult
 import com.mxwis.aitranslate.data.dictionary.DictionaryRepositoryContract
 import com.mxwis.aitranslate.data.dictionary.DictionaryWordSummary
+import com.mxwis.aitranslate.data.model.MlKitLanguageModelState
 import com.mxwis.aitranslate.data.model.ModelState
 import com.mxwis.aitranslate.data.ocr.ImageTextRecognizerContract
 import com.mxwis.aitranslate.data.settings.AppSettings
@@ -14,6 +15,7 @@ import com.mxwis.aitranslate.data.translation.TranslationRepositoryContract
 import com.mxwis.aitranslate.data.update.AppUpdateCheckResult
 import com.mxwis.aitranslate.data.update.AppUpdateRelease
 import com.mxwis.aitranslate.domain.ModelType
+import com.mxwis.aitranslate.domain.OfflineModelType
 import com.mxwis.aitranslate.domain.TranslateOutput
 import com.mxwis.aitranslate.domain.TranslateRequest
 import com.mxwis.aitranslate.domain.TranslationMode
@@ -167,6 +169,43 @@ class TranslateViewModelTest {
     }
 
     @Test
+    fun `选择 ML Kit 离线模型后会持久化当前离线模型类型`() = runTest {
+        val repository = FakeTranslationRepository(
+            initialSettings = AppSettings(defaultMode = TranslationMode.OFFLINE),
+        )
+        val viewModel = TranslateViewModel(repository)
+        advanceUntilIdle()
+
+        val mlKitModel = viewModel.uiState.value.unifiedModelList.first {
+            it.offlineModelType == OfflineModelType.ML_KIT
+        }
+        viewModel.selectUnifiedModel(mlKitModel)
+        advanceUntilIdle()
+        viewModel.updateSourceText("hello")
+        viewModel.translate()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(TranslationMode.OFFLINE, state.selectedMode)
+        assertEquals(OfflineModelType.ML_KIT, state.settings.offlineModelType)
+        assertEquals(OfflineModelType.ML_KIT, state.selectedUnifiedModel?.offlineModelType)
+        assertEquals(OfflineModelType.ML_KIT, repository.updatedOfflineModelType)
+        assertEquals(TranslationMode.OFFLINE, repository.lastTranslateMode)
+    }
+
+    @Test
+    fun `会展示 ML Kit 语种包状态`() = runTest {
+        val viewModel = TranslateViewModel(FakeTranslationRepository())
+        advanceUntilIdle()
+
+        val languageModels = viewModel.uiState.value.mlKitLanguageModels
+        assertEquals("en", languageModels.first().languageTag)
+        assertTrue(languageModels.first().isBuiltIn)
+        assertEquals("zh", languageModels.last().languageTag)
+        assertFalse(languageModels.last().isDownloaded)
+    }
+
+    @Test
     fun `图片OCR成功后写入识别文本`() = runTest {
         val viewModel = TranslateViewModel(
             repository = FakeTranslationRepository(),
@@ -316,9 +355,25 @@ private class FakeTranslationRepository(
     override val settings: Flow<AppSettings> = settingsFlow
     override val history: Flow<List<TranslationHistoryEntity>> = MutableStateFlow(emptyList())
     override val modelState: Flow<ModelState> = MutableStateFlow(ModelState())
+    override val mlKitLanguageModels: Flow<List<MlKitLanguageModelState>> = MutableStateFlow(
+        listOf(
+            MlKitLanguageModelState(
+                languageTag = "en",
+                displayName = "英文（English）",
+                isBuiltIn = true,
+                isDownloaded = true,
+            ),
+            MlKitLanguageModelState(
+                languageTag = "zh",
+                displayName = "中文（简体/繁体）",
+            ),
+        ),
+    )
     var updatedDefaultMode: TranslationMode? = null
         private set
     var updatedModelName: String? = null
+        private set
+    var updatedOfflineModelType: OfflineModelType? = null
         private set
     var lastTranslateMode: TranslationMode? = null
         private set
@@ -339,6 +394,10 @@ private class FakeTranslationRepository(
         updatedDefaultMode = value
         settingsFlow.value = settingsFlow.value.copy(defaultMode = value)
     }
+    override suspend fun updateOfflineModelType(value: OfflineModelType) {
+        updatedOfflineModelType = value
+        settingsFlow.value = settingsFlow.value.copy(offlineModelType = value)
+    }
     override suspend fun fetchCloudModels(settings: AppSettings): List<String> = emptyList()
     override suspend fun checkAppUpdate(currentVersionCode: Int): AppUpdateCheckResult = appUpdateResult
     override suspend fun downloadAppUpdate(
@@ -356,6 +415,9 @@ private class FakeTranslationRepository(
     override suspend fun downloadModel() = Unit
     override suspend fun deleteModel() = Unit
     override fun refreshModelState() = Unit
+    override suspend fun refreshMlKitLanguageModels() = Unit
+    override suspend fun downloadMlKitLanguageModel(languageTag: String) = Unit
+    override suspend fun deleteMlKitLanguageModel(languageTag: String) = Unit
     override suspend fun deleteHistory(entity: TranslationHistoryEntity) = Unit
     override suspend fun clearHistory() = Unit
 }

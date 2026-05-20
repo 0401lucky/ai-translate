@@ -7,6 +7,7 @@ import com.mxwis.aitranslate.data.dictionary.DictionaryEntry
 import com.mxwis.aitranslate.data.dictionary.DictionaryRepositoryContract
 import com.mxwis.aitranslate.data.dictionary.DictionaryWordSummary
 import com.mxwis.aitranslate.data.history.TranslationHistoryEntity
+import com.mxwis.aitranslate.data.model.MlKitLanguageModelState
 import com.mxwis.aitranslate.data.model.ModelState
 import com.mxwis.aitranslate.data.ocr.ImageTextRecognizerContract
 import com.mxwis.aitranslate.data.settings.AppSettings
@@ -19,6 +20,7 @@ import com.mxwis.aitranslate.domain.ClipboardQuickTranslatePolicy
 import com.mxwis.aitranslate.domain.LanguageOption
 import com.mxwis.aitranslate.domain.Languages
 import com.mxwis.aitranslate.domain.ModelType
+import com.mxwis.aitranslate.domain.OfflineModelType
 import com.mxwis.aitranslate.domain.TranslateRequest
 import com.mxwis.aitranslate.domain.TranslationMode
 import com.mxwis.aitranslate.domain.UnifiedModelOption
@@ -83,6 +85,7 @@ data class TranslateUiState(
     val selectedUnifiedModel: UnifiedModelOption? = null,
     val unifiedModelList: List<UnifiedModelOption> = emptyList(),
     val isUnifiedModelPickerOpen: Boolean = false,
+    val mlKitLanguageModels: List<MlKitLanguageModelState> = emptyList(),
     val isImageTranslatorOpen: Boolean = false,
     val imageSourceLabel: String = "图片翻译",
     val imageUri: String? = null,
@@ -159,6 +162,14 @@ class TranslateViewModel(
             }
         }
         repository.refreshModelState()
+        viewModelScope.launch {
+            repository.mlKitLanguageModels.collect { languageModels ->
+                _uiState.update { it.copy(mlKitLanguageModels = languageModels) }
+            }
+        }
+        viewModelScope.launch {
+            repository.refreshMlKitLanguageModels()
+        }
     }
 
     fun selectSection(section: AppSection) {
@@ -365,7 +376,7 @@ class TranslateViewModel(
                         imageTranslatedText = output.translatedText,
                         selectedMode = output.usedMode,
                         isImageTranslating = false,
-                        imageInfoMessage = "已使用${output.usedMode.label}翻译图片文字",
+                        imageInfoMessage = "已使用${output.displayModeLabel}翻译图片文字",
                     )
                 }
             }.onFailure { error ->
@@ -433,8 +444,12 @@ class TranslateViewModel(
         when (model.type) {
             ModelType.OFFLINE -> {
                 _uiState.update {
+                    val settings = it.settings.copy(
+                        defaultMode = mode,
+                        offlineModelType = model.offlineModelType ?: OfflineModelType.HY_MT,
+                    )
                     it.copy(
-                        settings = it.settings.copy(defaultMode = mode),
+                        settings = settings,
                         selectedMode = mode,
                         selectedUnifiedModel = model,
                         isUnifiedModelPickerOpen = false,
@@ -469,6 +484,9 @@ class TranslateViewModel(
         }
         viewModelScope.launch {
             repository.updateDefaultMode(mode)
+            if (model.type == ModelType.OFFLINE) {
+                repository.updateOfflineModelType(model.offlineModelType ?: OfflineModelType.HY_MT)
+            }
             if (model.type == ModelType.CLOUD) {
                 repository.updateModelName(model.displayName)
             }
@@ -481,6 +499,11 @@ class TranslateViewModel(
             val settings = if (model.type == ModelType.CLOUD) {
                 val provider = state.settings.selectedProvider.copy(modelName = model.displayName)
                 state.settings.withSelectedProvider(provider).copy(defaultMode = mode)
+            } else if (model.type == ModelType.OFFLINE) {
+                state.settings.copy(
+                    defaultMode = mode,
+                    offlineModelType = model.offlineModelType ?: OfflineModelType.HY_MT,
+                )
             } else {
                 state.settings.copy(defaultMode = mode)
             }
@@ -494,6 +517,9 @@ class TranslateViewModel(
         }
         viewModelScope.launch {
             repository.updateDefaultMode(mode)
+            if (model.type == ModelType.OFFLINE) {
+                repository.updateOfflineModelType(model.offlineModelType ?: OfflineModelType.HY_MT)
+            }
             if (model.type == ModelType.CLOUD) {
                 repository.updateModelName(model.displayName)
             }
@@ -523,12 +549,29 @@ class TranslateViewModel(
 
         list.add(
             UnifiedModelOption(
-                id = "offline-hymt",
-                displayName = "HY-MT 1.5B",
+                id = "offline-${OfflineModelType.HY_MT.id}",
+                displayName = OfflineModelType.HY_MT.displayName,
                 type = ModelType.OFFLINE,
-                providerName = "本地推理",
+                providerName = OfflineModelType.HY_MT.providerName,
                 isAvailable = modelState.isAvailable,
-                subtitle = if (modelState.isAvailable) "本地可用 · 无需网络" else "未下载 · 约 1.13GB",
+                subtitle = if (modelState.isAvailable) {
+                    "本地可用 · Cloudflare R2 分片下载"
+                } else {
+                    "未下载 · 约 1.13GB · Cloudflare R2"
+                },
+                offlineModelType = OfflineModelType.HY_MT,
+            ),
+        )
+
+        list.add(
+            UnifiedModelOption(
+                id = "offline-${OfflineModelType.ML_KIT.id}",
+                displayName = "Google ML Kit（设备端离线）",
+                type = ModelType.OFFLINE,
+                providerName = OfflineModelType.ML_KIT.providerName,
+                isAvailable = true,
+                subtitle = "免费 · 无需 API Key · 官方按语种下载",
+                offlineModelType = OfflineModelType.ML_KIT,
             ),
         )
 
@@ -592,7 +635,9 @@ class TranslateViewModel(
         models: List<UnifiedModelOption>,
     ): UnifiedModelOption? {
         return when (mode) {
-            TranslationMode.OFFLINE -> models.firstOrNull { it.type == ModelType.OFFLINE }
+            TranslationMode.OFFLINE -> models.firstOrNull {
+                it.type == ModelType.OFFLINE && it.offlineModelType == settings.offlineModelType
+            } ?: models.firstOrNull { it.type == ModelType.OFFLINE }
             TranslationMode.AUTO -> models.firstOrNull { it.type == ModelType.AUTO }
             TranslationMode.CLOUD -> models.firstOrNull {
                 it.type == ModelType.CLOUD && it.displayName == settings.modelName
@@ -679,7 +724,7 @@ class TranslateViewModel(
                         translatedText = output.translatedText,
                         selectedMode = output.usedMode,
                         isTranslating = false,
-                        infoMessage = "已使用${output.usedMode.label}翻译",
+                        infoMessage = "已使用${output.displayModeLabel}翻译",
                     )
                 }
             }.onFailure { error ->
@@ -809,7 +854,7 @@ class TranslateViewModel(
                         miniTranslatedText = output.translatedText,
                         selectedMode = output.usedMode,
                         isMiniTranslating = false,
-                        miniInfoMessage = "已使用${output.usedMode.label}翻译",
+                        miniInfoMessage = "已使用${output.displayModeLabel}翻译",
                     )
                 }
             }.onFailure { error ->
@@ -1179,6 +1224,18 @@ class TranslateViewModel(
 
     fun deleteModel() {
         viewModelScope.launch { repository.deleteModel() }
+    }
+
+    fun refreshMlKitLanguageModels() {
+        viewModelScope.launch { repository.refreshMlKitLanguageModels() }
+    }
+
+    fun downloadMlKitLanguageModel(languageTag: String) {
+        viewModelScope.launch { repository.downloadMlKitLanguageModel(languageTag) }
+    }
+
+    fun deleteMlKitLanguageModel(languageTag: String) {
+        viewModelScope.launch { repository.deleteMlKitLanguageModel(languageTag) }
     }
 
     fun deleteHistory(entity: TranslationHistoryEntity) {

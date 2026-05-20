@@ -9,10 +9,18 @@ import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -75,6 +83,7 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
@@ -134,10 +143,12 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.mxwis.aitranslate.data.dictionary.DictionaryEntry
 import com.mxwis.aitranslate.data.dictionary.DictionaryWordSummary
 import com.mxwis.aitranslate.data.history.TranslationHistoryEntity
+import com.mxwis.aitranslate.data.model.MlKitLanguageModelState
 import com.mxwis.aitranslate.data.settings.CloudProviderSettings
 import com.mxwis.aitranslate.domain.LanguageOption
 import com.mxwis.aitranslate.domain.Languages
 import com.mxwis.aitranslate.domain.ModelType
+import com.mxwis.aitranslate.domain.OfflineModelType
 import com.mxwis.aitranslate.domain.TranslationMode
 import com.mxwis.aitranslate.domain.UnifiedModelOption
 import com.mxwis.aitranslate.overlay.FloatingTranslateService
@@ -197,6 +208,9 @@ fun AiTranslateApp(viewModel: TranslateViewModel) {
             onCloseUnifiedModelPicker = viewModel::closeUnifiedModelPicker,
             onSelectUnifiedModel = viewModel::selectUnifiedModel,
             onUpdateDefaultUnifiedModel = viewModel::updateDefaultUnifiedModel,
+            onRefreshMlKitLanguageModels = viewModel::refreshMlKitLanguageModels,
+            onDownloadMlKitLanguageModel = viewModel::downloadMlKitLanguageModel,
+            onDeleteMlKitLanguageModel = viewModel::deleteMlKitLanguageModel,
             onOpenImageTranslator = viewModel::openImageTranslator,
             onUpdateImageRecognizedText = viewModel::updateImageRecognizedText,
             onTranslateImageText = viewModel::translateImageText,
@@ -253,6 +267,9 @@ private fun AiTranslateContent(
     onCloseUnifiedModelPicker: () -> Unit,
     onSelectUnifiedModel: (UnifiedModelOption) -> Unit,
     onUpdateDefaultUnifiedModel: (UnifiedModelOption) -> Unit,
+    onRefreshMlKitLanguageModels: () -> Unit,
+    onDownloadMlKitLanguageModel: (String) -> Unit,
+    onDeleteMlKitLanguageModel: (String) -> Unit,
     onOpenImageTranslator: (String, String) -> Unit,
     onUpdateImageRecognizedText: (String) -> Unit,
     onTranslateImageText: () -> Unit,
@@ -398,6 +415,9 @@ private fun AiTranslateContent(
                     onDeleteModel = onDeleteModel,
                     onDefaultModeChanged = onDefaultModeChanged,
                     onUpdateDefaultUnifiedModel = onUpdateDefaultUnifiedModel,
+                    onRefreshMlKitLanguageModels = onRefreshMlKitLanguageModels,
+                    onDownloadMlKitLanguageModel = onDownloadMlKitLanguageModel,
+                    onDeleteMlKitLanguageModel = onDeleteMlKitLanguageModel,
                     onClearHistory = onClearHistory,
                     onCheckAppUpdate = onCheckAppUpdate,
                     onDownloadAppUpdate = onDownloadAppUpdate,
@@ -486,11 +506,13 @@ private fun AiTranslateContent(
 
     if (state.isClipboardSuggestionOpen) {
         Dialog(onDismissRequest = onDismissClipboardQuickTranslate) {
-            ClipboardQuickTranslateCard(
-                clipboardText = state.clipboardCandidateText,
-                onAccept = onAcceptClipboardQuickTranslate,
-                onDismiss = onDismissClipboardQuickTranslate,
-            )
+            DialogAnimationWrapper {
+                ClipboardQuickTranslateCard(
+                    clipboardText = state.clipboardCandidateText,
+                    onAccept = onAcceptClipboardQuickTranslate,
+                    onDismiss = onDismissClipboardQuickTranslate,
+                )
+            }
         }
     }
 
@@ -502,18 +524,20 @@ private fun AiTranslateContent(
             }
         }
         Dialog(onDismissRequest = onCloseMiniTranslator) {
-            MiniTranslateCard(
-                state = state,
-                onTranslate = onTranslateMini,
-                onCopyTranslation = { text ->
-                    clipboard.setText(AnnotatedString(text))
-                    Toast.makeText(context, "已复制译文", Toast.LENGTH_SHORT).show()
-                },
-                onSpeakSource = { speakText(state.miniSourceText, state.sourceLanguage) },
-                onSpeakTranslation = { speakText(state.miniTranslatedText, state.targetLanguage) },
-                onOpenFullTranslate = onOpenFullTranslateFromMini,
-                onClose = onCloseMiniTranslator,
-            )
+            DialogAnimationWrapper {
+                MiniTranslateCard(
+                    state = state,
+                    onTranslate = onTranslateMini,
+                    onCopyTranslation = { text ->
+                        clipboard.setText(AnnotatedString(text))
+                        Toast.makeText(context, "已复制译文", Toast.LENGTH_SHORT).show()
+                    },
+                    onSpeakSource = { speakText(state.miniSourceText, state.sourceLanguage) },
+                    onSpeakTranslation = { speakText(state.miniTranslatedText, state.targetLanguage) },
+                    onOpenFullTranslate = onOpenFullTranslateFromMini,
+                    onClose = onCloseMiniTranslator,
+                )
+            }
         }
     }
 
@@ -1306,7 +1330,10 @@ private fun currentModelDisplayName(state: TranslateUiState): String {
     return when (state.selectedMode) {
         TranslationMode.CLOUD -> selected?.displayName
             ?: state.settings.modelName.ifBlank { "选择云端模型" }
-        TranslationMode.OFFLINE -> selected?.displayName ?: "HY-MT 1.5B"
+        TranslationMode.OFFLINE -> selected?.displayName ?: when (state.settings.offlineModelType) {
+            OfflineModelType.HY_MT -> OfflineModelType.HY_MT.displayName
+            OfflineModelType.ML_KIT -> "Google ML Kit（设备端离线）"
+        }
         TranslationMode.AUTO -> selected?.displayName ?: "自动选择"
     }
 }
@@ -1315,7 +1342,7 @@ private fun currentModelSubtitle(state: TranslateUiState): String {
     val selected = state.selectedUnifiedModel?.takeIf { it.type == currentModelType(state) }
     return selected?.subtitle ?: when (state.selectedMode) {
         TranslationMode.CLOUD -> "${state.settings.selectedProvider.name} · 云端"
-        TranslationMode.OFFLINE -> "本地推理 · 离线"
+        TranslationMode.OFFLINE -> state.settings.offlineModelType.defaultSubtitle
         TranslationMode.AUTO -> "智能切换 · 自动"
     }
 }
@@ -1392,25 +1419,41 @@ private fun UnifiedModelPickerSheet(
                 UnifiedModelItem(
                     model = model,
                     isSelected = state.selectedUnifiedModel?.id == model.id
-                            || (state.selectedUnifiedModel == null && state.selectedMode == TranslationMode.OFFLINE),
+                            || (
+                                state.selectedUnifiedModel == null
+                                        && state.selectedMode == TranslationMode.OFFLINE
+                                        && model.offlineModelType == state.settings.offlineModelType
+                                ),
                     onSelect = { onSelectModel(model) },
                     trailing = {
-                        if (!model.isAvailable) {
-                            OutlinedButton(
-                                onClick = onDownloadModel,
-                                shape = RoundedCornerShape(16.dp),
-                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                            ) {
-                                Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(Modifier.width(4.dp))
-                                Text("下载", style = MaterialTheme.typography.labelSmall)
+                        when (model.offlineModelType) {
+                            OfflineModelType.HY_MT -> {
+                                if (!model.isAvailable) {
+                                    OutlinedButton(
+                                        onClick = onDownloadModel,
+                                        shape = RoundedCornerShape(16.dp),
+                                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                                    ) {
+                                        Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(16.dp))
+                                        Spacer(Modifier.width(4.dp))
+                                        Text("下载", style = MaterialTheme.typography.labelSmall)
+                                    }
+                                } else {
+                                    Text(
+                                        text = "已下载",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.primary,
+                                    )
+                                }
                             }
-                        } else {
-                            Text(
-                                text = "已下载",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.primary,
-                            )
+                            OfflineModelType.ML_KIT -> {
+                                Text(
+                                    text = "按需下载",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
+                            }
+                            null -> Unit
                         }
                     },
                 )
@@ -3217,6 +3260,9 @@ private fun SettingsScreen(
     onDeleteModel: () -> Unit,
     onDefaultModeChanged: (TranslationMode) -> Unit,
     onUpdateDefaultUnifiedModel: (UnifiedModelOption) -> Unit,
+    onRefreshMlKitLanguageModels: () -> Unit,
+    onDownloadMlKitLanguageModel: (String) -> Unit,
+    onDeleteMlKitLanguageModel: (String) -> Unit,
     onClearHistory: () -> Unit,
     onCheckAppUpdate: () -> Unit,
     onDownloadAppUpdate: () -> Unit,
@@ -3243,153 +3289,206 @@ private fun SettingsScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    if (activeSubPage != null) {
-        // 拦截系统返回键，使其返回设置主菜单
-        androidx.activity.compose.BackHandler {
-            activeSubPage = null
-        }
-        
-        SettingsSubPageLayout(
-            subPage = activeSubPage!!,
-            onBack = { activeSubPage = null },
-            state = state,
-            onBaseUrlChanged = onBaseUrlChanged,
-            onApiKeyChanged = onApiKeyChanged,
-            onProviderNameChanged = onProviderNameChanged,
-            onSelectCloudProvider = onSelectCloudProvider,
-            onAddCloudProvider = onAddCloudProvider,
-            onOpenModelPicker = onOpenModelPicker,
-            onDownloadModel = onDownloadModel,
-            onDeleteModel = onDeleteModel,
-            onDefaultModeChanged = onDefaultModeChanged,
-            onUpdateDefaultUnifiedModel = onUpdateDefaultUnifiedModel,
-            onClearHistory = onClearHistory,
-            onCheckAppUpdate = onCheckAppUpdate,
-            onDownloadAppUpdate = onDownloadAppUpdate,
-            ttsState = ttsState,
-            onRefreshTts = onRefreshTts,
-            onInstallTtsData = onInstallTtsData,
-            onOpenTtsSettings = onOpenTtsSettings,
-            onTestTts = onTestTts,
-            overlayPermissionGranted = overlayPermissionGranted,
-            openOverlayPermissionSettings = { openOverlayPermissionSettings(context) }
-        )
-    } else {
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            item {
-                Text(
-                    text = "系统设置",
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+    AnimatedContent(
+        targetState = activeSubPage,
+        transitionSpec = {
+            if (initialState == null && targetState != null) {
+                // 进入二级子页面：新页面从右侧划入，旧主页向左淡出（视差）
+                (slideInHorizontally(animationSpec = tween(300)) { width -> width } + fadeIn(animationSpec = tween(300)))
+                    .togetherWith(slideOutHorizontally(animationSpec = tween(300)) { width -> -width / 3 } + fadeOut(animationSpec = tween(300)))
+            } else {
+                // 返回主设置页面：新主页从左侧划入，旧页面向右淡出（视差）
+                (slideInHorizontally(animationSpec = tween(300)) { width -> -width / 3 } + fadeIn(animationSpec = tween(300)))
+                    .togetherWith(slideOutHorizontally(animationSpec = tween(300)) { width -> width } + fadeOut(animationSpec = tween(300)))
             }
-            if (state.modelFetchError != null || state.modelFetchMessage != null) {
+        },
+        label = "SettingsSubPageTransition",
+        modifier = Modifier.fillMaxSize()
+    ) { subPage ->
+        if (subPage != null) {
+            // 拦截系统返回键，使其返回设置主菜单
+            androidx.activity.compose.BackHandler {
+                activeSubPage = null
+            }
+            
+            SettingsSubPageLayout(
+                subPage = subPage,
+                onBack = { activeSubPage = null },
+                state = state,
+                onBaseUrlChanged = onBaseUrlChanged,
+                onApiKeyChanged = onApiKeyChanged,
+                onProviderNameChanged = onProviderNameChanged,
+                onSelectCloudProvider = onSelectCloudProvider,
+                onAddCloudProvider = onAddCloudProvider,
+                onOpenModelPicker = onOpenModelPicker,
+                onDownloadModel = onDownloadModel,
+                onDeleteModel = onDeleteModel,
+                onDefaultModeChanged = onDefaultModeChanged,
+                onUpdateDefaultUnifiedModel = onUpdateDefaultUnifiedModel,
+                onRefreshMlKitLanguageModels = onRefreshMlKitLanguageModels,
+                onDownloadMlKitLanguageModel = onDownloadMlKitLanguageModel,
+                onDeleteMlKitLanguageModel = onDeleteMlKitLanguageModel,
+                onClearHistory = onClearHistory,
+                onCheckAppUpdate = onCheckAppUpdate,
+                onDownloadAppUpdate = onDownloadAppUpdate,
+                ttsState = ttsState,
+                onRefreshTts = onRefreshTts,
+                onInstallTtsData = onInstallTtsData,
+                onOpenTtsSettings = onOpenTtsSettings,
+                onTestTts = onTestTts,
+                overlayPermissionGranted = overlayPermissionGranted,
+                openOverlayPermissionSettings = { openOverlayPermissionSettings(context) }
+            )
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
                 item {
-                    MessageBanner(
-                        error = state.modelFetchError,
-                        info = state.modelFetchMessage,
+                    Text(
+                        text = "系统设置",
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
-            }
-            
-            // 分组一：模型与服务
-            item {
-                SettingsCategoryCard(title = "模型与翻译服务") {
-                    SettingsNavigationRow(
-                        title = "AI 模型服务",
-                        subtitle = if (isCloudConfigured) "当前使用 ${selectedProvider.name}" else "配置 API 密钥与模型",
-                        icon = {
-                            ProviderIconBadge(
-                                name = selectedProvider.name,
-                                baseUrl = selectedProvider.baseUrl,
-                                modifier = Modifier.size(22.dp),
-                            )
-                        },
-                        onClick = { activeSubPage = SettingsSubPage.MODEL_SERVICE }
-                    )
-                    HorizontalDivider(
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                    )
-                    SettingsNavigationRow(
-                        title = "离线模型管理",
-                        subtitle = if (state.modelState.isAvailable) "本地大模型可用" else "下载 1.13GB 本地大模型",
-                        icon = { Icon(Icons.Default.Storage, contentDescription = null, tint = Color(0xFF5966E8)) },
-                        onClick = { activeSubPage = SettingsSubPage.OFFLINE_MODEL }
-                    )
-                    HorizontalDivider(
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                    )
-                    SettingsNavigationRow(
-                        title = "启动默认模型",
-                        subtitle = state.selectedUnifiedModel?.displayName ?: "选择默认加载项",
-                        icon = { Icon(Icons.Default.Translate, contentDescription = null, tint = Color(0xFF159FBE)) },
-                        onClick = { activeSubPage = SettingsSubPage.LAUNCH_MODEL }
-                    )
+                if (state.modelFetchError != null || state.modelFetchMessage != null) {
+                    item {
+                        MessageBanner(
+                            error = state.modelFetchError,
+                            info = state.modelFetchMessage,
+                        )
+                    }
                 }
-            }
-            
-            // 分组二：功能与性能
-            item {
-                SettingsCategoryCard(title = "功能与性能") {
-                    SettingsNavigationRow(
-                        title = "文本朗读 (TTS)",
-                        subtitle = ttsStatusText(ttsState),
-                        icon = { Icon(Icons.AutoMirrored.Filled.VolumeUp, contentDescription = null, tint = Color(0xFF4CAF50)) },
-                        onClick = { activeSubPage = SettingsSubPage.TTS }
-                    )
-                    HorizontalDivider(
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                    )
-                    SettingsNavigationRow(
-                        title = "系统悬浮窗",
-                        subtitle = if (overlayPermissionGranted) "悬浮球已授权" else "开启复制快捷翻译",
-                        icon = { Icon(Icons.Default.Translate, contentDescription = null, tint = Color(0xFFFF9800)) },
-                        onClick = { activeSubPage = SettingsSubPage.FLOATING_WINDOW }
-                    )
-                    HorizontalDivider(
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                    )
-                    SettingsNavigationRow(
-                        title = "网络与性能",
-                        subtitle = "配置超时与流式输出等",
-                        icon = { Icon(Icons.Default.Settings, contentDescription = null, tint = Color(0xFF9C27B0)) },
-                        onClick = { activeSubPage = SettingsSubPage.NETWORK_PERFORMANCE }
-                    )
+
+                // 分组一：模型与服务
+                item {
+                    SettingsCategoryCard(title = "模型与翻译服务") {
+                        SettingsNavigationRow(
+                            title = "AI 模型服务",
+                            subtitle = if (isCloudConfigured) "当前使用 ${selectedProvider.name}" else "配置 API 密钥与模型",
+                            icon = {
+                                ProviderIconBadge(
+                                    name = selectedProvider.name,
+                                    baseUrl = selectedProvider.baseUrl,
+                                    modifier = Modifier.size(22.dp),
+                                )
+                            },
+                            onClick = { activeSubPage = SettingsSubPage.MODEL_SERVICE }
+                        )
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        )
+                        SettingsNavigationRow(
+                            title = "离线模型管理",
+                            subtitle = if (state.settings.offlineModelType == OfflineModelType.ML_KIT) {
+                                "当前使用 ML Kit 设备端离线"
+                            } else if (state.modelState.isAvailable) {
+                                "HY-MT 本地大模型可用"
+                            } else {
+                                "HY-MT 走 R2，ML Kit 按需下载"
+                            },
+                            icon = { Icon(Icons.Default.Storage, contentDescription = null, tint = Color(0xFF5966E8)) },
+                            onClick = { activeSubPage = SettingsSubPage.OFFLINE_MODEL }
+                        )
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        )
+                        SettingsNavigationRow(
+                            title = "启动默认模型",
+                            subtitle = state.selectedUnifiedModel?.displayName ?: "选择默认加载项",
+                            icon = { Icon(Icons.Default.Translate, contentDescription = null, tint = Color(0xFF159FBE)) },
+                            onClick = { activeSubPage = SettingsSubPage.LAUNCH_MODEL }
+                        )
+                    }
                 }
-            }
-            
-            // 分组三：系统与其它
-            item {
-                SettingsCategoryCard(title = "系统与其它") {
-                    SettingsNavigationRow(
-                        title = "数据与历史",
-                        subtitle = "管理本地历史与存储",
-                        icon = { Icon(Icons.Default.History, contentDescription = null, tint = Color(0xFF607D8B)) },
-                        onClick = { activeSubPage = SettingsSubPage.DATA_HISTORY }
-                    )
-                    HorizontalDivider(
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                    )
-                    SettingsNavigationRow(
-                        title = "关于与系统更新",
-                        subtitle = "版本 ${BuildConfig.VERSION_NAME}",
-                        icon = { Icon(Icons.Default.Info, contentDescription = null, tint = Color(0xFFE91E63)) },
-                        onClick = { activeSubPage = SettingsSubPage.ABOUT_UPDATE }
-                    )
+
+                // 分组二：功能与性能
+                item {
+                    SettingsCategoryCard(title = "功能与性能") {
+                        SettingsNavigationRow(
+                            title = "文本朗读 (TTS)",
+                            subtitle = ttsStatusText(ttsState),
+                            icon = { Icon(Icons.AutoMirrored.Filled.VolumeUp, contentDescription = null, tint = Color(0xFF4CAF50)) },
+                            onClick = { activeSubPage = SettingsSubPage.TTS }
+                        )
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        )
+                        SettingsNavigationRow(
+                            title = "系统悬浮窗",
+                            subtitle = if (overlayPermissionGranted) "悬浮球已授权" else "开启复制快捷翻译",
+                            icon = { Icon(Icons.Default.Translate, contentDescription = null, tint = Color(0xFFFF9800)) },
+                            onClick = { activeSubPage = SettingsSubPage.FLOATING_WINDOW }
+                        )
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        )
+                        SettingsNavigationRow(
+                            title = "网络与性能",
+                            subtitle = "配置超时与流式输出等",
+                            icon = { Icon(Icons.Default.Settings, contentDescription = null, tint = Color(0xFF9C27B0)) },
+                            onClick = { activeSubPage = SettingsSubPage.NETWORK_PERFORMANCE }
+                        )
+                    }
+                }
+
+                // 分组三：系统与其它
+                item {
+                    SettingsCategoryCard(title = "系统与其它") {
+                        SettingsNavigationRow(
+                            title = "数据与历史",
+                            subtitle = "管理本地历史与存储",
+                            icon = { Icon(Icons.Default.History, contentDescription = null, tint = Color(0xFF607D8B)) },
+                            onClick = { activeSubPage = SettingsSubPage.DATA_HISTORY }
+                        )
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        )
+                        SettingsNavigationRow(
+                            title = "关于与系统更新",
+                            subtitle = "版本 ${BuildConfig.VERSION_NAME}",
+                            icon = { Icon(Icons.Default.Info, contentDescription = null, tint = Color(0xFFE91E63)) },
+                            onClick = { activeSubPage = SettingsSubPage.ABOUT_UPDATE }
+                        )
+                    }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun DialogAnimationWrapper(
+    content: @Composable () -> Unit
+) {
+    var isVisible by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        isVisible = true
+    }
+
+    AnimatedVisibility(
+        visible = isVisible,
+        enter = scaleIn(
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioMediumBouncy,
+                stiffness = Spring.StiffnessLow
+            ),
+            initialScale = 0.85f
+        ) + fadeIn(animationSpec = tween(250)),
+        exit = scaleOut(
+            animationSpec = tween(200),
+            targetScale = 0.85f
+        ) + fadeOut(animationSpec = tween(200))
+    ) {
+        content()
     }
 }
 
@@ -3414,6 +3513,144 @@ private fun SettingsCategoryCard(
         ) {
             Column(content = content)
         }
+    }
+}
+
+@Composable
+private fun MlKitLanguagePackSection(
+    models: List<MlKitLanguageModelState>,
+    onRefresh: () -> Unit,
+    onDownload: (String) -> Unit,
+    onDelete: (String) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Google ML Kit 语种包",
+                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                )
+                Text(
+                    text = "英文内置，其它语种下载后可离线使用",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            TextButton(onClick = onRefresh) {
+                Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(4.dp))
+                Text("刷新")
+            }
+        }
+
+        if (models.isEmpty()) {
+            Text(
+                text = "正在读取语种包状态",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        } else {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.34f),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)),
+            ) {
+                Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)) {
+                    models.forEachIndexed { index, model ->
+                        MlKitLanguagePackRow(
+                            model = model,
+                            onDownload = { onDownload(model.languageTag) },
+                            onDelete = { onDelete(model.languageTag) },
+                        )
+                        if (index != models.lastIndex) {
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MlKitLanguagePackRow(
+    model: MlKitLanguageModelState,
+    onDownload: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    text = model.displayName,
+                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                )
+                MlKitLanguagePackStatusChip(model)
+            }
+            model.errorMessage?.takeIf { it.isNotBlank() }?.let { error ->
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = error,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+
+        when {
+            model.canDownload -> TextButton(onClick = onDownload) {
+                Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(4.dp))
+                Text("下载")
+            }
+            model.canDelete -> TextButton(onClick = onDelete) {
+                Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(4.dp))
+                Text("删除")
+            }
+            model.isDownloading -> CircularProgressIndicator(
+                modifier = Modifier.size(22.dp),
+                strokeWidth = 2.dp,
+            )
+        }
+    }
+}
+
+@Composable
+private fun MlKitLanguagePackStatusChip(model: MlKitLanguageModelState) {
+    val (text, color) = when {
+        model.isBuiltIn -> "内置" to MaterialTheme.colorScheme.secondary
+        model.isDownloading -> "下载中" to MaterialTheme.colorScheme.primary
+        model.isDownloaded -> "已下载" to MaterialTheme.colorScheme.tertiary
+        else -> "未下载" to MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    Surface(
+        shape = RoundedCornerShape(999.dp),
+        color = color.copy(alpha = 0.1f),
+        border = BorderStroke(1.dp, color.copy(alpha = 0.16f)),
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+            style = MaterialTheme.typography.labelSmall,
+            color = color,
+        )
     }
 }
 
@@ -3487,6 +3724,9 @@ private fun SettingsSubPageLayout(
     onDeleteModel: () -> Unit,
     onDefaultModeChanged: (TranslationMode) -> Unit,
     onUpdateDefaultUnifiedModel: (UnifiedModelOption) -> Unit,
+    onRefreshMlKitLanguageModels: () -> Unit,
+    onDownloadMlKitLanguageModel: (String) -> Unit,
+    onDeleteMlKitLanguageModel: (String) -> Unit,
     onClearHistory: () -> Unit,
     onCheckAppUpdate: () -> Unit,
     onDownloadAppUpdate: () -> Unit,
@@ -3673,6 +3913,76 @@ private fun SettingsSubPageLayout(
                                     text = state.modelState.filePath.ifBlank { "尚未创建模型路径" },
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+                    item {
+                        val mlKitModel = state.unifiedModelList.firstOrNull {
+                            it.offlineModelType == OfflineModelType.ML_KIT
+                        }
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(22.dp),
+                            color = MaterialTheme.colorScheme.surface,
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                            shadowElevation = 1.dp
+                        ) {
+                            Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            "Google ML Kit（设备端离线）",
+                                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                        )
+                                        Spacer(Modifier.height(4.dp))
+                                        Text(
+                                            text = if (state.settings.offlineModelType == OfflineModelType.ML_KIT) {
+                                                "当前离线模型 · 首次按语种下载"
+                                            } else {
+                                                "免费 · 无需 API Key · 首次按语种下载约 30MB"
+                                            },
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                        )
+                                    }
+                                }
+
+                                Text(
+                                    text = "ML Kit 官方模型由 Google SDK 下载和缓存，下载后可离线使用；它不是自管 GGUF 文件，不能像 HY-MT 一样切换到 Cloudflare R2 分发。",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    lineHeight = 18.sp,
+                                )
+
+                                Button(
+                                    onClick = {
+                                        if (mlKitModel != null) {
+                                            onUpdateDefaultUnifiedModel(mlKitModel)
+                                        }
+                                    },
+                                    enabled = mlKitModel != null && state.settings.offlineModelType != OfflineModelType.ML_KIT,
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(44.dp),
+                                ) {
+                                    Icon(Icons.Default.Translate, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(if (state.settings.offlineModelType == OfflineModelType.ML_KIT) "已设为当前离线模型" else "设为当前离线模型")
+                                }
+
+                                DashedDivider(modifier = Modifier.padding(vertical = 2.dp))
+
+                                MlKitLanguagePackSection(
+                                    models = state.mlKitLanguageModels,
+                                    onRefresh = onRefreshMlKitLanguageModels,
+                                    onDownload = onDownloadMlKitLanguageModel,
+                                    onDelete = onDeleteMlKitLanguageModel,
                                 )
                             }
                         }

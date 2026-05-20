@@ -10,9 +10,9 @@ android {
 
     val resolvedVersionCode = providers.gradleProperty("appVersionCode")
         .map(String::toInt)
-        .getOrElse(6)
+        .getOrElse(7)
     val resolvedVersionName = providers.gradleProperty("appVersionName")
-        .getOrElse("1.0.5")
+        .getOrElse("1.0.6")
 
     defaultConfig {
         applicationId = "com.mxwis.aitranslate"
@@ -22,6 +22,12 @@ android {
         versionName = resolvedVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        if (providers.gradleProperty("emulatorX86Only").orNull == "true") {
+            ndk {
+                abiFilters += "x86_64"
+            }
+        }
     }
 
     buildFeatures {
@@ -65,6 +71,8 @@ dependencies {
 
     implementation("com.squareup.okhttp3:okhttp:5.3.0")
     implementation("com.llamatik:library-android:1.3.0")
+    implementation("com.google.mlkit:translate:17.0.3")
+    implementation("com.google.mlkit:language-id:17.0.6")
     implementation("com.google.mlkit:text-recognition:16.0.1")
     implementation("com.google.mlkit:text-recognition-chinese:16.0.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")

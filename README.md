@@ -1,6 +1,6 @@
 # AI Translate
 
-AI Translate 是一个 Android 原生大模型翻译 App，主线能力是“云端翻译 + 本地离线翻译 + 跨 App 快捷入口”。当前版本已经支持文本翻译、OpenAI 兼容 API、多供应商配置、Hy-MT Q4_K_M 离线模型、翻译历史、系统划词/分享入口、剪贴板快捷翻译、系统 TTS 朗读、半自动悬浮球翻译和 R2 应用更新入口。
+AI Translate 是一个 Android 原生大模型翻译 App，主线能力是“云端翻译 + 本地离线翻译 + 跨 App 快捷入口”。当前版本已经支持文本翻译、OpenAI 兼容 API、多供应商配置、Hy-MT Q4_K_M 离线模型、Google ML Kit 设备端离线翻译、翻译历史、系统划词/分享入口、剪贴板快捷翻译、系统 TTS 朗读、半自动悬浮球翻译和 R2 应用更新入口。
 
 ## 当前能力
 
@@ -9,8 +9,8 @@ AI Translate 是一个 Android 原生大模型翻译 App，主线能力是“云
 - OpenAI 兼容云端接口：支持 Base URL、API Key、模型名称配置。
 - 多供应商管理：内置 OpenAI、DeepSeek、OpenRouter 和自定义兼容接口，可切换当前供应商。
 - 模型列表获取：通过 `/v1/models` 拉取模型列表，支持搜索、选择和手动添加模型。
-- 离线翻译：使用 HY-MT1.5-1.8B Q4_K_M GGUF，接入 Llamatik/llama.cpp Android 推理库。
-- 离线模型管理：支持首次下载、状态展示、进度展示、删除和基础文件校验。
+- 离线翻译：支持 HY-MT1.5-1.8B Q4_K_M GGUF 与 Google ML Kit 设备端离线翻译。
+- 离线模型管理：HY-MT 支持 R2 分片下载、状态展示、进度展示、删除和基础文件校验；ML Kit 按语种由官方 SDK 首次下载并缓存。
 - 历史记录：使用 Room 保存翻译历史，列表折叠预览，点击后查看完整详情。
 - 系统划词与分享：注册 `ACTION_PROCESS_TEXT` 和 `ACTION_SEND`，可从其他 App 把文本带入中央快速翻译卡片。
 - 剪贴板快捷翻译：App 打开或回到前台时检测剪贴板文本，用户确认后打开中央快速翻译卡片并自动翻译。
@@ -56,7 +56,7 @@ app/build/outputs/apk/debug/app-debug.apk
 
 ## 离线模型说明
 
-当前离线模型为腾讯 HY-MT 标准 Q4_K_M GGUF：
+当前自管离线大模型为腾讯 HY-MT 标准 Q4_K_M GGUF：
 
 - 文件名：`HY-MT1.5-1.8B-Q4_K_M.gguf`
 - 体积：约 1.13GB
@@ -65,6 +65,8 @@ app/build/outputs/apk/debug/app-debug.apk
 
 大模型文件不内置进 APK，采用首次下载到 App 私有目录的方案。当前实现会从 R2 下载 6 个分片，拼接为完整 GGUF 后校验文件大小和 SHA256，再保存到 App 私有目录的 `models/` 子目录。
 
+Google ML Kit 是第二个轻量离线模型选项，免费、无需 API Key，首次按语种由 ML Kit SDK 下载官方模型，之后可离线使用。ML Kit 官方模型不是自管 GGUF 文件，当前不转存到 Cloudflare R2。
+
 ## 应用更新说明
 
 应用内更新同样走 Cloudflare R2：
@@ -72,7 +74,7 @@ app/build/outputs/apk/debug/app-debug.apk
 - Bucket：`ai-translate-assets`
 - 正式域名：`https://download.204152.xyz`
 - 更新清单：`https://download.204152.xyz/releases/latest.json`
-- Debug 测试包示例：`https://download.204152.xyz/releases/ai-translate-1.0.5-debug.apk`
+- Debug 测试包示例：`https://download.204152.xyz/releases/ai-translate-1.0.6-debug.apk`
 
 后续 Debug 测试发版可执行：
 
@@ -117,9 +119,9 @@ docs/
 
 ## 当前验证状态
 
-- `testDebugUnitTest`：1.0.5 发版时两次按 60 秒上限执行均超时，未得到新的完整测试报告。
-- `assembleDebug`：1.0.5 发版脚本内构建通过。
-- R2 更新清单：`https://download.204152.xyz/releases/latest.json` 当前可访问；1.0.5 Debug 更新包由 `scripts/publish-r2-debug-update.ps1` 上传，大小 `189921447` 字节，SHA256 为 `639E94F916FD088A828BABB949CD52971CA0C3579FCA18FEE41E709B4C58642A`。
+- `testDebugUnitTest`：1.0.6 发版前关键测试组通过；全量测试按 60 秒上限执行超时，未得到新的完整报告。
+- `assembleDebug`：1.0.6 发版脚本内构建通过。
+- R2 更新清单：`https://download.204152.xyz/releases/latest.json` 当前可访问；1.0.6 Debug 更新包由 `scripts/publish-r2-debug-update.ps1` 上传，大小 `257436140` 字节，SHA256 为 `E6C498C403B7D2A8CCFA39094B2206D522284F9AF2A3DE90FB4D9744838124D7`。
 - 系统文本朗读：1.0.2 已补齐 TTS 引擎检测、语音包安装入口、系统设置修复入口和语言候选回退。
 - Q4_K_M 离线翻译：已在真机验证，`hi` 可翻译为 `嗨`。
 - 系统划词/分享、剪贴板提示、悬浮球：代码与构建产物已就绪；悬浮球已在 Chrome 真机验证，不会再跳回 AI 翻译主界面。

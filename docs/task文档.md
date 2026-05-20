@@ -1371,3 +1371,202 @@
 - R2 公网验证通过：APK 地址返回 200，`Content-Length = 189921447`；`https://download.204152.xyz/releases/latest.json` 返回 200 且指向 `1.0.5 (6)`。
 - SHA256：`639E94F916FD088A828BABB949CD52971CA0C3579FCA18FEE41E709B4C58642A`。
 - 本次发布改动已提交并推送到 GitHub `main` 分支。
+
+## Task 037：添加设置页二级路由过渡动效与弹窗动效
+
+### 目标
+
+为设置页的二级子页面切换添加顺滑的横向滑入/滑出与淡入/淡出过渡动画，并为供应商配置弹窗（ModalBottomSheet）或其它对话框增加精致的出现/消失动效，使整个界面的操作手感更加灵动和符合现代 Android Material 3 动效规范。
+
+### 范围
+
+- 使用 imagegen 生成设置页二级页面切换动画与弹窗动效设计图，保存到 `docs/ui/`。
+- 重构 `SettingsScreen`：使用 `AnimatedContent` 和 `slideInHorizontally` / `slideOutHorizontally` 以及 `fadeIn` / `fadeOut` 组合，替代直接的 `if-else` 子页面瞬时切换，使二级子页面从右侧滑入，主设置页向左滑出；返回时相反。
+- 优化主翻译页、词典页或设置页中可能存在的 Dialog / BottomSheet 动效，例如配置合适的 `spring` 阻尼或过度动画。
+- 确保所有的动效流畅、无卡顿，且不会引发 Composition 状态错误或引发内存泄露。
+- 保持编译通过。
+
+### 完成标准
+
+- 设计图已生成并保存到 `docs/ui/`。
+- 设置页进入二级子页面时，新页面从右侧平滑滑入，旧页面向左滑出；点击返回时相反。
+- 供应商配置弹窗（或其它 Sheet 弹窗）展示与收起符合优雅平滑过渡。
+- Kotlin 编译与项目构建（compileDebugKotlin）无误。
+
+### 验证记录
+
+- `.\gradlew :app:compileDebugKotlin`：成功通过，无任何编译错误。
+- 确认动画参数：
+  - 二级子页面过渡：主设置页与二级页面切换使用横向视差滑动与渐变平滑过渡（Parallax Horizontal Slide + Fade），从右向左视差滑动比例 1/3，从左向右同理，动画采用 tween(300)。
+  - 剪贴板快译/迷你翻译弹窗：包装在 DialogAnimationWrapper 中，采用带有 `Spring.DampingRatioMediumBouncy`（中度弹性回弹）与 `Spring.StiffnessLow`（低刚度）的物理动画系统进行 `scaleIn` 和 `fadeIn`（initialScale = 0.85f），并以 tween(200) `scaleOut` 与 `fadeOut`，带来了灵动高级的物理回弹动效。
+
+## Task 038：整理老师要求的 AI 翻译 App 原型设计交付文档
+
+### 目标
+
+根据老师对原型设计文档的要求，基于本项目 AI 翻译 App 整理一份可直接提交的文档，完整覆盖原型设计价值、翻译业务闭环、界面一致性、AI 初始设计问题、Pixso 手工优化、交叉校验、字段规范、成员分工与责任承诺。
+
+### 范围
+
+- 新增 Markdown 源文档，方便后续继续修改。
+- 导出 Word 文档，方便直接提交或打印。
+- 将截图中的成员分工、核心任务、占比和责任承诺改写为本项目对应内容后完整写入。
+- 补充文本翻译、图片 OCR 翻译、词典、历史记录、AI 模型服务、离线模型、TTS、悬浮翻译等真实模块说明。
+- 补充翻译闭环、模型配置字段关联、离线模型状态、OCR 状态、历史记录字段和异常处理说明。
+- 补充原型设计交叉校验清单，确保老师要求的内容都能在文档中找到。
+
+### 不包含
+
+- 不修改 Android App 业务代码。
+- 不重新设计 App UI。
+- 不替换现有项目任务文档结构。
+
+### 完成标准
+
+- `docs/AI翻译App原型设计交付文档.md` 已包含完整正文。
+- `docs/AI翻译App原型设计交付文档.docx` 已成功生成。
+- 文档至少包含：项目概述、设计目标、页面范围、字段规范、翻译业务流程、AI 生成问题、Pixso 优化、交叉校验、成员分工与责任承诺、验收清单。
+- 截图中的表格信息已按 AI 翻译 App 项目真实模块完整改写进文档。
+- 文档包含适量项目原型图，覆盖文本翻译、图片 OCR 翻译、离线词典、AI 模型服务和悬浮翻译。
+
+### 验证记录
+
+- 已新增项目版 Markdown 文档：`docs/AI翻译App原型设计交付文档.md`。
+- 已生成项目版 Word 文档：`docs/AI翻译App原型设计交付文档.docx`。
+- 已确认文档内容围绕 AI 翻译 App，不再使用截图示例中的客户订单追踪业务。
+- 已加入 5 张项目原型图，并重新生成 Word 文档。
+- 已通过 Microsoft Word 导出单页 PDF 预览，确认原型图插入后页面无明显溢出或重叠。
+
+## Task 039：新增 Google ML Kit 设备端离线翻译模型
+
+### 目标
+
+在保留现有 HY-MT Q4_K_M 离线大模型的基础上，新增 Google ML Kit 设备端离线翻译模型，让用户可以在“本地大模型离线翻译”和“轻量设备端离线翻译”之间选择。
+
+### 范围
+
+- 使用 imagegen 生成 ML Kit 离线模型管理设计图并保存到 `docs/ui/mlkit-offline-model-design.png`。
+- 新增 Google ML Kit Translation 与 Language ID 依赖。
+- 新增离线模型类型设置，默认继续使用 HY-MT，避免影响旧用户。
+- 新增 ML Kit 翻译引擎，支持目标语言明确、源语言自动检测、首次按语种下载模型和下载后离线翻译。
+- 翻译仓库按用户选择路由到 HY-MT 或 ML Kit；自动模式云端失败后回退当前离线模型。
+- 模型选择弹窗、离线模型管理页和默认启动模型页展示 ML Kit 选项。
+- 明确 R2 边界：HY-MT 等自管模型继续通过 Cloudflare R2 分发；ML Kit 官方模型由 Google ML Kit SDK 下载和缓存，不切换到 R2。
+
+### 不包含
+
+- 不替换 HY-MT。
+- 不把 Google ML Kit 官方模型文件抽取、转存或分发到 R2。
+- 不修改 Cloudflare R2 bucket、更新包发布协议或 HY-MT 分片下载逻辑。
+
+### 完成标准
+
+- Debug APK 能成功构建。
+- 单元测试覆盖 ML Kit 语言映射、离线模型选择持久化、仓库路由和自动模式回退。
+- 用户可在模型选择弹窗中选择 `Google ML Kit（设备端离线）`。
+- 设置页离线模型管理能同时看到 HY-MT 与 Google ML Kit 两个离线模型说明。
+- 主翻译、图片翻译、迷你翻译和悬浮翻译都沿用当前选择的离线模型。
+
+### 验证记录
+
+- 已使用 imagegen 生成设计图：`docs/ui/mlkit-offline-model-design.png`。
+- 已新增依赖：`com.google.mlkit:translate:17.0.3`、`com.google.mlkit:language-id:17.0.6`。
+- 已新增 `OfflineModelType`，默认值为 HY-MT，并通过 DataStore 持久化当前离线模型选择。
+- 已新增 `MlKitTranslationEngine`：目标语言校验、自动源语言识别、`zh-CN`/`zh-TW` 到 `zh` 映射、官方模型按需下载、翻译后释放 `Translator`。
+- 已更新仓库路由：离线模式按当前离线模型选择 HY-MT 或 ML Kit；自动模式云端失败后回退当前离线模型。
+- 已更新模型选择弹窗、离线模型管理页、默认启动模型页和翻译完成提示。
+- 已明确 R2 边界：HY-MT 继续走 Cloudflare R2 分片下载；ML Kit 官方模型由 SDK 内部下载和缓存，不转存到 R2。
+- `.\gradlew.bat :app:compileDebugKotlin --no-daemon --console=plain`：通过。
+- `.\gradlew.bat :app:testDebugUnitTest --tests "com.mxwis.aitranslate.data.translation.MlKitTranslationEngineTest" --tests "com.mxwis.aitranslate.data.translation.TranslationRepositoryRoutingTest" --tests "com.mxwis.aitranslate.data.settings.SettingsStoreTest" --no-daemon --console=plain`：通过。
+- `.\gradlew.bat :app:testDebugUnitTest --tests "com.mxwis.aitranslate.ui.TranslateViewModelTest" --no-daemon --console=plain`：通过。
+- `.\gradlew.bat :app:testDebugUnitTest --no-daemon --console=plain`：通过。
+- `.\gradlew.bat :app:assembleDebug --no-daemon --console=plain`：通过，Debug APK 输出为 `app/build/outputs/apk/debug/app-debug.apk`。
+- 已使用 `.\gradlew.bat :app:assembleDebug -PemulatorX86Only=true --no-daemon --console=plain` 构建模拟器专用 x86_64 调试包。
+- 已安装并启动到模拟器 `emulator-5554`，前台 Activity 为 `com.mxwis.aitranslate/.MainActivity`。
+
+## Task 040：Google ML Kit 离线语种包管理
+
+### 目标
+
+参考 Google 翻译 App 的离线语种下载体验，在 ML Kit 离线模型下新增“语种包管理”区域，让用户按语种下载、查看和删除设备端翻译模型。
+
+### 范围
+
+- 使用 imagegen 生成 ML Kit 语种包管理设计图并保存到 `docs/ui/mlkit-language-pack-design.png`。
+- 新增 ML Kit 语种包状态模型，展示语种、是否内置、是否已下载、是否下载中、错误信息。
+- 使用 ML Kit `RemoteModelManager` 和 `TranslateRemoteModel` 获取已下载语种模型、下载指定语种模型、删除指定语种模型。
+- 英文作为 ML Kit 内置语种展示，不提供下载和删除操作。
+- 设置页离线模型管理中增加“Google ML Kit 语种包”列表，用户可按需下载/删除语种。
+- 翻译引擎仍保留 `downloadModelIfNeeded()` 兜底，避免用户未提前下载时无法翻译。
+
+### 不包含
+
+- 不把 ML Kit 官方语种模型转存到 Cloudflare R2。
+- 不新增自定义模型目录选择，语种模型仍由 ML Kit SDK 缓存在设备端。
+- 不做下载进度百分比，因为 ML Kit 语种模型管理 API 只提供下载任务完成/失败状态。
+
+### 完成标准
+
+- 设置页离线模型管理能看到 ML Kit 语种包列表。
+- 英文显示为内置，其它支持语种显示已下载/未下载/下载中。
+- 用户可下载和删除非英文语种包。
+- 下载或删除后列表状态能刷新。
+- Kotlin 编译、关键单测和 Debug APK 构建通过。
+
+### 验证记录
+
+- 已使用 imagegen 生成设计图：`docs/ui/mlkit-language-pack-design.png`。
+- 已新增 `MlKitLanguageModelState` 和 `MlKitLanguageModelManager`，通过 ML Kit `RemoteModelManager` 查询、下载和删除语种模型。
+- 已将语种包状态接入 `TranslationRepository` 与 `TranslateViewModel`，设置页启动时会刷新 ML Kit 语种包状态。
+- 已在离线模型管理页新增“Google ML Kit 语种包”列表，支持刷新、下载、删除；英文展示为内置，不提供删除；`zh-CN`/`zh-TW` 合并展示为 `中文（简体/繁体）`。
+- 翻译引擎仍保留 `downloadModelIfNeeded()` 兜底，用户未提前下载语种时仍可在首次翻译时触发官方下载。
+- `.\gradlew.bat :app:compileDebugKotlin --no-daemon --console=plain`：通过。
+- `.\gradlew.bat :app:testDebugUnitTest --tests "com.mxwis.aitranslate.data.model.MlKitLanguageModelManagerTest" --tests "com.mxwis.aitranslate.data.translation.MlKitTranslationEngineTest" --no-daemon --console=plain`：通过。
+- `.\gradlew.bat :app:testDebugUnitTest --tests "com.mxwis.aitranslate.ui.TranslateViewModelTest" --no-daemon --console=plain`：通过。
+- `.\gradlew.bat :app:testDebugUnitTest --tests "com.mxwis.aitranslate.data.translation.TranslationRepositoryRoutingTest" --tests "com.mxwis.aitranslate.data.settings.SettingsStoreTest" --no-daemon --console=plain`：通过。
+- `.\gradlew.bat :app:testDebugUnitTest --no-daemon --console=plain`：通过。
+- `.\gradlew.bat :app:assembleDebug -PemulatorX86Only=true --no-daemon --console=plain`：通过。
+- 已安装到模拟器 `emulator-5554` 并打开离线模型管理页，确认能看到 ML Kit 语种包列表：中文已下载、英文内置、日文/韩文/法文等显示未下载并提供下载按钮。
+- 模拟器截图：`tmp/mlkit-language-pack.png`。
+
+## Task 041：发布 1.0.6 ML Kit 离线模型内置更新包
+
+### 目标
+
+将 Google ML Kit 设备端离线翻译模型、按语种下载管理、模拟器安装验证等近期改动整理为 `1.0.6` Debug 更新包，上传到 Cloudflare R2 内置更新通道，并提交推送到 GitHub。
+
+### 范围
+
+- 将默认版本提升为 `versionCode = 7`、`versionName = 1.0.6`。
+- 更新 R2 Debug 发版脚本默认产物路径为 `releases/ai-translate-1.0.6-debug.apk`。
+- 执行发版脚本，生成并上传新版 APK 与 `releases/latest.json`。
+- 验证公开更新清单可访问，且指向 `1.0.6`。
+- 提交并推送 GitHub `main`。
+- 更新 README、任务文档和 TODO 日志，记录发布结果。
+
+### 不包含
+
+- 不配置正式 release keystore。
+- 不修改 R2 bucket、域名或应用更新协议结构。
+- 不把 ML Kit 官方语种模型转存到 Cloudflare R2。
+
+### 完成标准
+
+- App 默认版本号为 `1.0.6 (7)`。
+- R2 `releases/latest.json` 指向 `1.0.6` Debug APK。
+- Debug APK 构建通过，关键测试通过。
+- GitHub `main` 已推送本次 1.0.6 改动。
+
+### 验证记录
+
+- 已将默认版本号提升为 `versionCode = 7`、`versionName = 1.0.6`。
+- 已更新 `scripts/publish-r2-debug-update.ps1`，默认发布 `releases/ai-translate-1.0.6-debug.apk`。
+- `.\gradlew.bat :app:compileDebugKotlin --no-daemon --console=plain`：通过。
+- `.\gradlew.bat :app:testDebugUnitTest --no-daemon --console=plain`：按 60 秒上限执行超时，未得到新的全量测试报告。
+- `.\gradlew.bat :app:testDebugUnitTest --tests "com.mxwis.aitranslate.data.translation.MlKitTranslationEngineTest" --console=plain`：通过。
+- `.\gradlew.bat :app:testDebugUnitTest --tests "com.mxwis.aitranslate.data.translation.TranslationRepositoryRoutingTest" --tests "com.mxwis.aitranslate.data.settings.SettingsStoreTest" --console=plain`：通过。
+- `.\gradlew.bat :app:testDebugUnitTest --tests "com.mxwis.aitranslate.data.model.MlKitLanguageModelManagerTest" --tests "com.mxwis.aitranslate.ui.TranslateViewModelTest" --console=plain`：通过。
+- 已执行 `.\scripts\publish-r2-debug-update.ps1`，Debug 构建成功并上传 `releases/ai-translate-1.0.6-debug.apk` 和 `releases/latest.json`。
+- 本地 `app/build/outputs/apk/debug/output-metadata.json` 已确认 `versionCode = 7`、`versionName = 1.0.6`。
+- R2 公网验证通过：APK 地址返回 200，`Content-Length = 257436140`；`https://download.204152.xyz/releases/latest.json` 返回 200 且指向 `1.0.6 (7)`。
+- R2 manifest 已写入 SHA256：`E6C498C403B7D2A8CCFA39094B2206D522284F9AF2A3DE90FB4D9744838124D7`。

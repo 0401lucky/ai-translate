@@ -1,6 +1,7 @@
 package com.mxwis.aitranslate.data.settings
 
 import com.mxwis.aitranslate.domain.TranslationMode
+import com.mxwis.aitranslate.domain.OfflineModelType
 
 const val DEFAULT_PROVIDER_ID = "openai"
 const val DEFAULT_BASE_URL = "https://api.openai.com"
@@ -26,6 +27,7 @@ data class AppSettings(
     val cloudProviders: List<CloudProviderSettings> = defaultCloudProviders(),
     val selectedProviderId: String = DEFAULT_PROVIDER_ID,
     val defaultMode: TranslationMode = TranslationMode.CLOUD,
+    val offlineModelType: OfflineModelType = OfflineModelType.HY_MT,
 ) {
     val selectedProvider: CloudProviderSettings
         get() = cloudProviders.firstOrNull { it.id == selectedProviderId }

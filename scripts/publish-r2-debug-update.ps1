@@ -1,13 +1,13 @@
 param(
-    [int]$VersionCode = 6,
-    [string]$VersionName = "1.0.5",
+    [int]$VersionCode = 7,
+    [string]$VersionName = "1.0.6",
     [string]$Bucket = "ai-translate-assets",
     [string]$PublicBaseUrl = "https://download.204152.xyz",
-    [string]$ApkObjectKey = "releases/ai-translate-1.0.5-debug.apk",
+    [string]$ApkObjectKey = "releases/ai-translate-1.0.6-debug.apk",
     [string[]]$Notes = @(
-        "重构全新浅色高颜值界面，翻译、词典、历史与设置页视觉全面升级。",
-        "设置页改为二级页面路由架构，模型服务、离线模型、TTS、悬浮窗和系统更新配置更清晰。",
-        "优化首页按钮、词典相近词卡片和禁用态细节，减少视觉重叠与无效空白。"
+        "新增 Google ML Kit 设备端离线翻译模型，免费、无需 API Key，下载后可离线使用。",
+        "离线模型管理页新增 ML Kit 语种包列表，支持按语种查看、下载、删除和刷新状态。",
+        "自动模式云端失败后会回退到用户当前选择的离线模型，HY-MT 和 ML Kit 可自由切换。"
     )
 )
 

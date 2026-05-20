@@ -451,3 +451,68 @@
 - [x] 验证公开 APK 和更新清单返回 200，且清单指向 `1.0.5 (6)`。
 - [x] 提交并推送 GitHub `main`。
 - [x] 回写验证结果到 Task 文档。
+
+## 2026-05-20：添加设置页二级路由过渡动效与弹窗动效
+
+- [x] 明确完成标准：设置页二级子页面横向平滑动效（从右侧滑入，左侧滑出；返回时向右滑出，主页从左侧滑入）、BottomSheet/弹窗优雅弹性物理过渡。
+- [x] 更新 `docs/task文档.md`，新增 Task 037。
+- [x] 使用 imagegen 生成设置页过渡动画与弹窗动效设计图，保存到 `docs/ui/settings-animation-design.png`。
+- [x] 用 `AnimatedContent` 替换 `SettingsScreen` 内二级页面的 if-else 条件替换，并配置 slide + fade 的 transitionSpec 动画。
+- [x] 优化剪贴板和迷你翻译弹窗的进场弹性缩放与淡入淡出过渡（DialogAnimationWrapper 物理微回弹）。
+- [x] 运行 Gradle 构建与编译，确保无任何编译错误或警告。
+- [x] 回写验证结果到 Task 文档和 TODO 日志。
+
+## 2026-05-20：整理老师要求的 AI 翻译 App 原型设计交付文档
+
+- [x] 明确完成标准：文档需基于 AI 翻译 App，覆盖项目概述、设计目标、页面范围、字段规范、翻译闭环、AI 初始问题、Pixso 优化、交叉校验、成员分工与责任承诺。
+- [x] 更新 `docs/task文档.md`，新增 Task 038。
+- [x] 发现初稿误用了截图中的客户订单追踪示例业务，已纠正为本项目内容。
+- [x] 新增 Markdown 源文档：`docs/AI翻译App原型设计交付文档.md`。
+- [x] 导出 Word 文档：`docs/AI翻译App原型设计交付文档.docx`。
+- [x] 检查截图中的分工表内容已按 AI 翻译 App 项目真实模块改写写入。
+- [x] 按用户补充要求加入 5 张项目原型图：文本翻译、图片 OCR 翻译、离线词典、AI 模型服务、悬浮翻译。
+- [x] 重新生成含图 Word 文档，并同步通用文件名 `docs/原型设计交付文档.docx`。
+- [x] 使用 Microsoft Word 导出 PDF 预览，检查原型图页面排版无明显溢出或重叠。
+- [x] 回写验证结果到 Task 文档和 TODO 日志。
+
+## 2026-05-20：新增 Google ML Kit 设备端离线翻译模型
+
+- [x] 明确完成标准：新增 ML Kit 作为第二个离线模型，默认保留 HY-MT，翻译入口统一沿用当前选择。
+- [x] 确认 R2 边界：HY-MT 等自管模型继续走 R2；ML Kit 官方模型由 SDK 内部下载和缓存，不转存到 R2。
+- [x] 更新 `docs/task文档.md`，新增 Task 039。
+- [x] 使用 imagegen 生成 ML Kit 离线模型管理设计图，保存到 `docs/ui/mlkit-offline-model-design.png`。
+- [x] 新增 ML Kit 翻译与语言识别依赖。
+- [x] 实现离线模型类型持久化。
+- [x] 实现 ML Kit 翻译引擎与仓库路由。
+- [x] 更新模型选择弹窗和离线模型管理页。
+- [x] 增加单元测试并运行构建验证。
+- [x] Kotlin 编译通过：`.\gradlew.bat :app:compileDebugKotlin --no-daemon --console=plain`。
+- [x] 新增/关键单测通过：ML Kit 映射、仓库回退路由、设置解码、TranslateViewModel。
+- [x] Debug APK 构建通过：`.\gradlew.bat :app:assembleDebug --no-daemon --console=plain`。
+- [x] 已构建 x86_64 模拟器专用包并安装到 `emulator-5554`，App 已启动到 `MainActivity`。
+- [x] 回写验证结果到 Task 文档和 TODO 日志。
+
+## 2026-05-20：Google ML Kit 离线语种包管理
+
+- [x] 明确完成标准：像 Google 翻译一样按语种展示、下载和删除 ML Kit 离线语种包。
+- [x] 确认边界：英文内置，ML Kit 官方语种模型由 SDK 缓存在设备端，不转存 R2。
+- [x] 更新 `docs/task文档.md`，新增 Task 040。
+- [x] 使用 imagegen 生成设计图，保存到 `docs/ui/mlkit-language-pack-design.png`。
+- [x] 新增 ML Kit 语种包管理器，支持查询、下载和删除语种模型。
+- [x] 将语种包状态接入 Repository 和 ViewModel，设置页会刷新当前下载状态。
+- [x] 在离线模型管理页增加语种包列表与下载/删除操作。
+- [x] 增加单元测试并运行构建验证。
+- [x] 全量单测通过：`.\gradlew.bat :app:testDebugUnitTest --no-daemon --console=plain`。
+- [x] 模拟器专用 Debug APK 构建通过并安装到 `emulator-5554`。
+- [x] 已在模拟器打开离线模型管理页，确认语种包列表、内置/已下载/未下载状态和下载/删除按钮正常展示。
+- [x] 回写验证结果到 Task 文档和 TODO 日志。
+
+## 2026-05-20：发布 1.0.6 ML Kit 离线模型内置更新包
+
+- [x] 明确完成标准：版本号 1.0.6 (7)、R2 latest.json 指向新版、构建测试通过、GitHub 推送完成。
+- [x] 更新 `docs/task文档.md`，新增 Task 041。
+- [x] 更新 App 默认版本号和 R2 发版脚本默认参数。
+- [x] 执行测试与构建验证：Kotlin 编译通过，ML Kit 映射、仓库路由、设置持久化、语种包管理和 ViewModel 关键测试通过；全量单测按 60 秒上限超时。
+- [x] 执行 R2 发版脚本并验证公开更新清单，`latest.json` 已指向 `1.0.6 (7)`。
+- [ ] 提交并推送 GitHub `main`。
+- [x] 回写验证结果到 Task 文档和 TODO 日志。

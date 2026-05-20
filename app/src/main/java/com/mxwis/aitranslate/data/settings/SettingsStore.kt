@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.mxwis.aitranslate.domain.OfflineModelType
 import com.mxwis.aitranslate.domain.TranslationMode
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -25,6 +26,7 @@ class SettingsStore(private val context: Context) {
         val cloudProviders = stringPreferencesKey("cloud_providers")
         val selectedProviderId = stringPreferencesKey("selected_provider_id")
         val defaultMode = stringPreferencesKey("default_mode")
+        val offlineModelType = stringPreferencesKey("offline_model_type")
     }
 
     val settings: Flow<AppSettings> = context.settingsDataStore.data
@@ -82,6 +84,13 @@ class SettingsStore(private val context: Context) {
         }
     }
 
+    suspend fun updateOfflineModelType(value: OfflineModelType) {
+        context.settingsDataStore.edit { preferences ->
+            val current = readSettings(preferences)
+            writeSettings(preferences, current.copy(offlineModelType = value))
+        }
+    }
+
     private suspend fun updateSelectedProvider(
         transform: (CloudProviderSettings) -> CloudProviderSettings,
     ) {
@@ -112,6 +121,7 @@ class SettingsStore(private val context: Context) {
             val defaultMode = runCatching {
                 TranslationMode.valueOf(preferences[Keys.defaultMode] ?: TranslationMode.CLOUD.name)
             }.getOrDefault(TranslationMode.CLOUD)
+            val offlineModelType = decodeOfflineModelType(preferences[Keys.offlineModelType])
 
             return AppSettings(
                 baseUrl = selectedProvider.baseUrl,
@@ -121,6 +131,7 @@ class SettingsStore(private val context: Context) {
                 cloudProviders = providers,
                 selectedProviderId = selectedProvider.id,
                 defaultMode = defaultMode,
+                offlineModelType = offlineModelType,
             )
         }
 
@@ -136,6 +147,11 @@ class SettingsStore(private val context: Context) {
             preferences[Keys.cloudProviders] = encodeCloudProviders(settings.cloudProviders)
             preferences[Keys.selectedProviderId] = provider.id
             preferences[Keys.defaultMode] = settings.defaultMode.name
+            preferences[Keys.offlineModelType] = settings.offlineModelType.id
+        }
+
+        internal fun decodeOfflineModelType(value: String?): OfflineModelType {
+            return OfflineModelType.fromId(value)
         }
 
         internal fun encodeCustomModelNames(values: List<String>): String {

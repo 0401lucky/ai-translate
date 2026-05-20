@@ -15,4 +15,8 @@ data class TranslateRequest(
 data class TranslateOutput(
     val translatedText: String,
     val usedMode: TranslationMode,
-)
+    val usedModelName: String? = null,
+) {
+    val displayModeLabel: String
+        get() = usedModelName ?: usedMode.label
+}

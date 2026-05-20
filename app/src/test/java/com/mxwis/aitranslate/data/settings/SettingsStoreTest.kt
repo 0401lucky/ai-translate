@@ -1,5 +1,6 @@
 package com.mxwis.aitranslate.data.settings
 
+import com.mxwis.aitranslate.domain.OfflineModelType
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -52,5 +53,12 @@ class SettingsStoreTest {
     @Test
     fun `损坏的供应商配置会安全解码为空列表`() {
         assertEquals(emptyList<CloudProviderSettings>(), SettingsStore.decodeCloudProviders("not-json"))
+    }
+
+    @Test
+    fun `离线模型类型解码默认保留 HY MT`() {
+        assertEquals(OfflineModelType.HY_MT, SettingsStore.decodeOfflineModelType(null))
+        assertEquals(OfflineModelType.HY_MT, SettingsStore.decodeOfflineModelType("unknown"))
+        assertEquals(OfflineModelType.ML_KIT, SettingsStore.decodeOfflineModelType("mlkit"))
     }
 }
