@@ -1570,3 +1570,4 @@
 - 本地 `app/build/outputs/apk/debug/output-metadata.json` 已确认 `versionCode = 7`、`versionName = 1.0.6`。
 - R2 公网验证通过：APK 地址返回 200，`Content-Length = 257436140`；`https://download.204152.xyz/releases/latest.json` 返回 200 且指向 `1.0.6 (7)`。
 - R2 manifest 已写入 SHA256：`E6C498C403B7D2A8CCFA39094B2206D522284F9AF2A3DE90FB4D9744838124D7`。
+- GitHub `main` 已推送 1.0.6 发版改动，提交为 `4dee3ca`。
