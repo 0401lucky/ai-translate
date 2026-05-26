@@ -19,7 +19,15 @@ class AuthInputValidatorTest {
     fun `注册会校验两次密码一致`() {
         assertEquals(
             "两次输入的密码不一致",
-            AuthInputValidator.validateRegistration("alice_01", "123456", "654321"),
+            AuthInputValidator.validateRegistration("alice_01", "alice@example.com", "123456", "654321", "123456"),
         )
+    }
+
+    @Test
+    fun `邮箱和验证码格式会参与注册校验`() {
+        assertEquals(null, AuthInputValidator.validateEmail("alice@example.com"))
+        assertEquals("邮箱格式不正确", AuthInputValidator.validateEmail("not-email"))
+        assertEquals(null, AuthInputValidator.validateVerificationCode("123456"))
+        assertEquals("验证码需要是 6 位数字", AuthInputValidator.validateVerificationCode("abc456"))
     }
 }

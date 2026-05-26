@@ -69,6 +69,7 @@ import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
@@ -130,6 +131,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -174,8 +176,11 @@ fun AiTranslateApp(viewModel: TranslateViewModel) {
                 state = uiState,
                 onModeSelected = viewModel::switchAuthMode,
                 onUsernameChanged = viewModel::updateAuthUsername,
+                onEmailChanged = viewModel::updateAuthEmail,
                 onPasswordChanged = viewModel::updateAuthPassword,
                 onConfirmPasswordChanged = viewModel::updateAuthConfirmPassword,
+                onVerificationCodeChanged = viewModel::updateAuthVerificationCode,
+                onSendVerificationCode = viewModel::sendAuthVerificationCode,
                 onSubmit = viewModel::submitAuth,
                 onContinueAsGuest = viewModel::continueAsGuest,
             )
@@ -244,8 +249,11 @@ private fun AuthScreen(
     state: TranslateUiState,
     onModeSelected: (AuthMode) -> Unit,
     onUsernameChanged: (String) -> Unit,
+    onEmailChanged: (String) -> Unit,
     onPasswordChanged: (String) -> Unit,
     onConfirmPasswordChanged: (String) -> Unit,
+    onVerificationCodeChanged: (String) -> Unit,
+    onSendVerificationCode: () -> Unit,
     onSubmit: () -> Unit,
     onContinueAsGuest: () -> Unit,
 ) {
@@ -320,6 +328,21 @@ private fun AuthScreen(
                             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None),
                             modifier = Modifier.fillMaxWidth(),
                         )
+                        if (state.authMode == AuthMode.REGISTER) {
+                            OutlinedTextField(
+                                value = state.authEmail,
+                                onValueChange = onEmailChanged,
+                                enabled = !state.isAuthLoading && !state.isAuthCodeSending,
+                                singleLine = true,
+                                label = { Text("邮箱") },
+                                leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
+                                keyboardOptions = KeyboardOptions(
+                                    capitalization = KeyboardCapitalization.None,
+                                    keyboardType = KeyboardType.Email,
+                                ),
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
                         OutlinedTextField(
                             value = state.authPassword,
                             onValueChange = onPasswordChanged,
@@ -341,6 +364,37 @@ private fun AuthScreen(
                                 visualTransformation = PasswordVisualTransformation(),
                                 modifier = Modifier.fillMaxWidth(),
                             )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                OutlinedTextField(
+                                    value = state.authVerificationCode,
+                                    onValueChange = onVerificationCodeChanged,
+                                    enabled = !state.isAuthLoading,
+                                    singleLine = true,
+                                    label = { Text("验证码") },
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    modifier = Modifier.weight(1f),
+                                )
+                                OutlinedButton(
+                                    onClick = onSendVerificationCode,
+                                    enabled = !state.isAuthLoading && !state.isAuthCodeSending,
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.height(56.dp),
+                                    contentPadding = PaddingValues(horizontal = 12.dp),
+                                ) {
+                                    if (state.isAuthCodeSending) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(16.dp),
+                                            strokeWidth = 2.dp,
+                                        )
+                                    } else {
+                                        Text("发送验证码")
+                                    }
+                                }
+                            }
                         }
 
                         MessageBanner(

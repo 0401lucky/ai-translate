@@ -1,14 +1,14 @@
 param(
-    [int]$VersionCode = 8,
-    [string]$VersionName = "1.0.7",
+    [int]$VersionCode = 9,
+    [string]$VersionName = "1.0.8",
     [string]$AuthBaseUrl = "https://ai-translate-auth.jiezhi858.workers.dev",
     [string]$Bucket = "ai-translate-assets",
     [string]$PublicBaseUrl = "https://download.204152.xyz",
-    [string]$ApkObjectKey = "releases/ai-translate-1.0.7-debug.apk",
+    [string]$ApkObjectKey = "releases/ai-translate-1.0.8-debug.apk",
     [string[]]$Notes = @(
-        "新增 Cloudflare 后端账号体系，支持注册、登录、退出登录和登录态保存。",
-        "登录后翻译历史会尝试同步到云端 D1 数据库，离线和游客模式仍可本机使用。",
-        "设置页新增账号与同步入口，可查看当前登录状态和后端服务地址。"
+        "注册流程新增邮箱验证码，验证码邮件通过 Resend 和 Cloudflare 子域名发送。",
+        "后端已强制校验邮箱验证码，提升课程项目账号注册安全性。",
+        "注册页新增邮箱、验证码输入和发送验证码按钮，登录与游客模式保持不变。"
     )
 )
 

@@ -15,10 +15,32 @@ object AuthInputValidator {
         return null
     }
 
-    fun validateRegistration(username: String, password: String, confirmPassword: String): String? {
+    fun normalizeEmail(value: String): String = value.trim().lowercase()
+
+    fun validateEmail(value: String): String? {
+        val email = normalizeEmail(value)
+        if (email.length !in 6..254) return "邮箱格式不正确"
+        if (!Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$").matches(email)) return "邮箱格式不正确"
+        return null
+    }
+
+    fun validateVerificationCode(value: String): String? {
+        if (!Regex("^\\d{6}$").matches(value.trim())) return "验证码需要是 6 位数字"
+        return null
+    }
+
+    fun validateRegistration(
+        username: String,
+        email: String,
+        password: String,
+        confirmPassword: String,
+        verificationCode: String,
+    ): String? {
         validateUsername(username)?.let { return it }
+        validateEmail(email)?.let { return it }
         validatePassword(password)?.let { return it }
         if (password != confirmPassword) return "两次输入的密码不一致"
+        validateVerificationCode(verificationCode)?.let { return it }
         return null
     }
 }

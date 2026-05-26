@@ -17,6 +17,7 @@ class AuthSessionStore(context: Context) {
         val token = preferences[TOKEN].orEmpty()
         val userId = preferences[USER_ID].orEmpty()
         val username = preferences[USERNAME].orEmpty()
+        val email = preferences[EMAIL]
         val expiresAt = preferences[EXPIRES_AT] ?: 0L
 
         if (token.isBlank() || userId.isBlank() || username.isBlank() || expiresAt <= System.currentTimeMillis()) {
@@ -24,7 +25,7 @@ class AuthSessionStore(context: Context) {
         } else {
             AuthSession(
                 token = token,
-                user = AuthUser(id = userId, username = username),
+                user = AuthUser(id = userId, username = username, email = email),
                 expiresAt = expiresAt,
             )
         }
@@ -35,6 +36,7 @@ class AuthSessionStore(context: Context) {
             preferences[TOKEN] = session.token
             preferences[USER_ID] = session.user.id
             preferences[USERNAME] = session.user.username
+            session.user.email?.let { preferences[EMAIL] = it } ?: preferences.remove(EMAIL)
             preferences[EXPIRES_AT] = session.expiresAt
         }
     }
@@ -44,6 +46,7 @@ class AuthSessionStore(context: Context) {
             preferences.remove(TOKEN)
             preferences.remove(USER_ID)
             preferences.remove(USERNAME)
+            preferences.remove(EMAIL)
             preferences.remove(EXPIRES_AT)
         }
     }
@@ -52,6 +55,7 @@ class AuthSessionStore(context: Context) {
         val TOKEN = stringPreferencesKey("token")
         val USER_ID = stringPreferencesKey("user_id")
         val USERNAME = stringPreferencesKey("username")
+        val EMAIL = stringPreferencesKey("email")
         val EXPIRES_AT = longPreferencesKey("expires_at")
     }
 }

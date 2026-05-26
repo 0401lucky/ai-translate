@@ -1745,3 +1745,117 @@
 - `git diff --check`：通过，仅有 Windows 换行提示。
 - 发布前 review 结论：未提交 JWT 密钥或生产 API Key；未纳入无关 Word 预览临时文件；R2 旧版本 APK 未删除。
 - 已提交并推送 GitHub `main`。
+
+## Task 045：注册邮箱验证码与 Resend 发信接入
+
+### 目标
+
+在现有 Cloudflare Workers + D1 登录注册后端上增加邮箱验证码能力。用户注册前先填写邮箱并请求验证码，Worker 使用 Resend 向 Cloudflare 子域名发信地址发送验证码邮件，Android 注册流程校验邮箱验证码后再创建账号。
+
+### 范围
+
+- 检索 Resend 官方文档，确认 API 发信、鉴权和 Cloudflare DNS 验证要求。
+- 使用 imagegen 生成邮箱验证码注册 UI 设计图并保存到 `docs/ui/`。
+- Worker 后端新增：
+  - `/auth/send-code` 发送注册验证码接口。
+  - 邮箱格式校验、发送冷却和验证码过期控制。
+  - D1 验证码表。
+  - Resend REST API 发信。
+- 注册接口新增 `email` 和 `verificationCode` 校验。
+- Android 新增：
+  - 注册邮箱输入。
+  - 发送验证码按钮。
+  - 验证码输入。
+  - 注册提交时携带邮箱验证码。
+
+### 不包含
+
+- 不在仓库中写入 `RESEND_API_KEY`。
+- 不替用户在 Resend 控制台创建 API Key。
+- 不绕过 Resend 域名验证流程。
+- 不改动登录后的业务功能。
+
+### 完成标准
+
+- Worker 代码和 D1 迁移齐全。
+- Android 注册页可以发送验证码并携带验证码注册。
+- 后端测试、Kotlin 编译和关键单测通过。
+- 线上 Worker 可部署；若未配置 Resend secret，发送验证码接口应返回明确配置错误，不影响已有登录接口。
+
+### 验证记录
+
+- 已确认 Resend 发信 API 为 `POST https://api.resend.com/emails`，通过 `Authorization: Bearer re_xxx` 鉴权，请求体包含 `from`、`to`、`subject`、`html` 或 `text`。
+- 已确认 Resend 建议使用子域名进行域名验证；Cloudflare 可通过 Resend 的 Cloudflare 自动配置或手动添加 DNS 记录完成验证。
+- 已确认当前本机环境和 Worker secret 中暂无 `RESEND_API_KEY`。
+- 已生成邮箱验证码注册 UI 设计图：`docs/ui/auth-email-code-design.png`。
+- 已新增 D1 迁移 `0002_email_verification.sql`：
+  - `users.email` 可空字段。
+  - `idx_users_email` 唯一索引。
+  - `email_verification_codes` 验证码表。
+- 已将远端 D1 迁移应用到 `ai_translate_auth`，远端表已包含 `email_verification_codes`。
+- Worker 新增 `/auth/send-code`，会校验邮箱、账号、发送冷却，并通过 Resend API 发送 6 位验证码。
+- Worker 注册接口已支持邮箱验证码注册；初始设置 `REQUIRE_EMAIL_VERIFICATION=false` 兼容已发布的 1.0.7 旧客户端，后续 1.0.8 发布已切换为强制验证码。
+- Worker 已重新部署，当前版本 ID 为 `9a7ac4ec-e0ac-4fb3-aa38-3b4a944c8105`。
+- 线上 `/auth/send-code` 在未配置 Resend API Key 时返回 `500` 和 `Resend API Key 未配置`，符合当前配置状态。
+- Android 注册页已新增邮箱输入、验证码输入和“发送验证码”按钮，注册提交会携带 `email` 和 `verificationCode`。
+- `node --test test/*.test.js`：通过，6 项后端安全/认证/验证码测试 0 failure。
+- `.\gradlew.bat :app:compileDebugKotlin --console=plain`：通过。
+- `.\gradlew.bat :app:testDebugUnitTest --tests "com.mxwis.aitranslate.data.auth.AuthInputValidatorTest" --tests "com.mxwis.aitranslate.ui.TranslateViewModelTest" --console=plain`：通过。
+- `git diff --check`：通过，仅有 Windows 换行提示。
+- 待配置项：在 Resend 验证 `send.204152.xyz`，并通过 `wrangler secret put RESEND_API_KEY` 写入 API Key；确认可发信后可将 `REQUIRE_EMAIL_VERIFICATION` 改为 `true` 并发布新版 APK。
+
+## Task 046：发布 1.0.8 强制邮箱验证码版本
+
+### 目标
+
+在 Resend 域名已验证、API Key 已提供的前提下，完成邮箱验证码注册的线上闭环：Worker 写入 Resend Secret 并强制注册验证码，Android 发布 `1.0.8 (9)` 内置更新包，推送 GitHub。
+
+### 范围
+
+- 将 Resend API Key 写入 Cloudflare Worker Secret。
+- 将 Worker `REQUIRE_EMAIL_VERIFICATION` 切换为 `true`。
+- 部署 Worker。
+- 验证 `/auth/send-code` 线上接口可成功调用。
+- 将 App 默认版本提升为 `1.0.8 (9)`。
+- 更新 R2 发版脚本默认版本、APK 路径和更新说明。
+- 构建 Debug APK、上传 R2、更新 `latest.json`。
+- 运行测试、review、提交并推送 GitHub。
+
+### 不包含
+
+- 不把 Resend API Key 写入仓库或文档。
+- 不删除旧版 R2 APK。
+- 不提交与本次发布无关的 Word 预览临时文件。
+
+### 完成标准
+
+- `RESEND_API_KEY` 只存在于 Cloudflare Secret。
+- Worker 线上发送验证码接口可调用。
+- R2 `latest.json` 指向 `1.0.8 (9)`。
+- Debug APK 构建通过，关键测试通过。
+- 相关代码、配置、文档和发布清单已提交并推送 GitHub。
+
+### 验证记录
+
+- 已通过 `wrangler secret put RESEND_API_KEY` 将 Resend API Key 写入 Cloudflare Worker Secret；密钥未写入仓库、文档或配置文件。
+- `wrangler secret list` 已确认 `JWT_SECRET` 与 `RESEND_API_KEY` 均存在。
+- 已将 `REQUIRE_EMAIL_VERIFICATION` 切换为 `true`。
+- Worker dry-run 通过，绑定包含 `env.DB`、`env.RESEND_FROM_EMAIL` 和 `env.REQUIRE_EMAIL_VERIFICATION ("true")`。
+- Worker 已部署到 `https://ai-translate-auth.jiezhi858.workers.dev`，当前版本 ID 为 `184e4a90-65ad-4282-92f7-0c59173c116e`。
+- 线上 `/auth/send-code` 使用 Resend 官方测试邮箱调用成功，返回 `200` 与 `{"ok":true,"expiresInSeconds":600,"cooldownSeconds":60}`。
+- 线上 `/auth/me` 未带 token 访问返回 `401`，响应体为 `{"message":"请先登录"}`。
+- 已将 App 默认版本号更新为 `1.0.8 (9)`。
+- 已更新 R2 发版脚本默认参数和 1.0.8 更新说明。
+- 已执行 `.\scripts\publish-r2-debug-update.ps1`，Debug APK 构建成功并上传：
+  - APK：`https://download.204152.xyz/releases/ai-translate-1.0.8-debug.apk`
+  - 大小：`257501735` 字节。
+  - SHA256：`6D4E68F8A65931EA435F3E6AF6B0D533E1F8BE210E983E18CE98F3800A5BB804`。
+- R2 公开校验通过：
+  - APK `HEAD` 返回 `200`，`Content-Length = 257501735`。
+  - `https://download.204152.xyz/releases/latest.json` 返回 `1.0.8 (9)`。
+- 本地 `app/build/outputs/apk/debug/output-metadata.json` 已确认 `versionCode = 9`、`versionName = 1.0.8`。
+- `node --test test/*.test.js`：通过，6 项后端安全/认证/验证码测试 0 failure。
+- `.\gradlew.bat :app:testDebugUnitTest --tests "com.mxwis.aitranslate.data.auth.AuthInputValidatorTest" --tests "com.mxwis.aitranslate.ui.TranslateViewModelTest" --console=plain`：通过。
+- `git diff --check`：通过，仅有 Windows 换行提示。
+- 发布前 review 结论：仓库内未出现 Resend API Key 明文；`RESEND_API_KEY` 只在 Worker Secret 中；未纳入无关 Word 预览临时文件；R2 旧版本 APK 未删除。
+- 已提交并推送 GitHub `main`。

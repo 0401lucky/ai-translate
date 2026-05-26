@@ -13,16 +13,43 @@ class AuthApiClient(
     private val client: OkHttpClient,
     private val baseUrl: String,
 ) {
-    suspend fun register(username: String, password: String): AuthResult = postAuth(
-        path = "/auth/register",
-        username = username,
-        password = password,
-    )
-
     suspend fun login(username: String, password: String): AuthResult = postAuth(
         path = "/auth/login",
         username = username,
+        email = null,
         password = password,
+        verificationCode = null,
+    )
+
+    suspend fun sendRegistrationCode(username: String, email: String) = withContext(Dispatchers.IO) {
+        val body = JSONObject()
+            .put("username", username)
+            .put("email", email)
+
+        val request = Request.Builder()
+            .url(resolveUrl("/auth/send-code"))
+            .post(body.toString().toRequestBody(JSON_MEDIA_TYPE))
+            .build()
+
+        client.newCall(request).execute().use { response ->
+            val responseText = response.body?.string().orEmpty()
+            if (!response.isSuccessful) {
+                error(parseErrorMessage(responseText, "验证码发送失败：HTTP ${response.code}"))
+            }
+        }
+    }
+
+    suspend fun register(
+        username: String,
+        email: String,
+        password: String,
+        verificationCode: String,
+    ): AuthResult = postAuth(
+        path = "/auth/register",
+        username = username,
+        email = email,
+        password = password,
+        verificationCode = verificationCode,
     )
 
     suspend fun syncHistory(token: String, entity: TranslationHistoryEntity) = withContext(Dispatchers.IO) {
@@ -49,11 +76,19 @@ class AuthApiClient(
         }
     }
 
-    private suspend fun postAuth(path: String, username: String, password: String): AuthResult =
+    private suspend fun postAuth(
+        path: String,
+        username: String,
+        email: String?,
+        password: String,
+        verificationCode: String?,
+    ): AuthResult =
         withContext(Dispatchers.IO) {
             val body = JSONObject()
                 .put("username", username)
                 .put("password", password)
+            email?.let { body.put("email", it) }
+            verificationCode?.let { body.put("verificationCode", it) }
 
             val request = Request.Builder()
                 .url(resolveUrl(path))
@@ -84,6 +119,8 @@ class AuthApiClient(
             user = AuthUser(
                 id = user.getString("id"),
                 username = user.getString("username"),
+                email = user.optString("email", "")
+                    .takeIf { it.isNotBlank() && it != "null" },
             ),
         )
     }

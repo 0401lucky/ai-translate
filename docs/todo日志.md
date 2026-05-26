@@ -560,3 +560,26 @@
 - [x] 构建 1.0.7 Debug APK 并上传 R2 内置更新。
 - [x] 运行后端测试、Kotlin 编译、关键单测和公开 URL 校验。
 - [x] 完成发布前 review、提交并推送 GitHub。
+
+## 2026-05-26：注册邮箱验证码与 Resend 发信接入
+
+- [x] 明确完成标准：注册流程新增邮箱验证码，Worker 通过 Resend 发送验证码，D1 保存验证码状态，Android 注册页支持发送与填写验证码。
+- [x] 检索 Resend 官方文档，确认发信 API、鉴权方式和 Cloudflare 子域名验证方式。
+- [x] 确认当前环境缺少 `RESEND_API_KEY`，本轮先完成代码和部署准备，真实发信需要后续配置 Resend secret 与验证发信域名。
+- [x] 使用 imagegen 生成邮箱验证码注册 UI 设计图。
+- [x] 新增 Worker 邮箱验证码接口、D1 迁移和 Resend 发信逻辑。
+- [x] 新增 Android 发送验证码、邮箱和验证码输入流程。
+- [x] 运行后端测试、Kotlin 编译和关键单测。
+- [x] 如不依赖 Resend 密钥的部分可部署，则应用 D1 迁移并部署 Worker。
+- [x] 完成 review 并回写验证结果。
+
+## 2026-05-26：发布 1.0.8 强制邮箱验证码版本
+
+- [x] 明确完成标准：Resend API Key 写入 Cloudflare Secret，Worker 强制注册邮箱验证码，1.0.8 Debug 包发布到 R2 内置更新，并推送 GitHub。
+- [x] 写入 `RESEND_API_KEY` 到 Cloudflare Worker Secret。
+- [x] 将 Worker `REQUIRE_EMAIL_VERIFICATION` 切换为 `true` 并部署。
+- [x] 验证线上发送验证码接口可调用。
+- [x] 将 App 默认版本号提升为 `1.0.8 (9)`，更新 R2 发版脚本说明。
+- [x] 构建 1.0.8 Debug APK 并上传 R2 内置更新。
+- [x] 运行后端测试、Kotlin 编译、关键单测和公开 URL 校验。
+- [x] 完成 review、提交并推送 GitHub。

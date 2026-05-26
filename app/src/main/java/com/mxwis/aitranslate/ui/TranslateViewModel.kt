@@ -58,9 +58,12 @@ data class TranslateUiState(
     val authGuestMode: Boolean = false,
     val authMode: AuthMode = AuthMode.LOGIN,
     val authUsername: String = "",
+    val authEmail: String = "",
     val authPassword: String = "",
     val authConfirmPassword: String = "",
+    val authVerificationCode: String = "",
     val isAuthLoading: Boolean = false,
+    val isAuthCodeSending: Boolean = false,
     val authErrorMessage: String? = null,
     val authInfoMessage: String? = null,
     val modelState: ModelState = ModelState(),
@@ -204,6 +207,7 @@ class TranslateViewModel(
                 authMode = mode,
                 authPassword = "",
                 authConfirmPassword = "",
+                authVerificationCode = "",
                 authErrorMessage = null,
                 authInfoMessage = null,
             )
@@ -214,12 +218,72 @@ class TranslateViewModel(
         _uiState.update { it.copy(authUsername = value, authErrorMessage = null, authInfoMessage = null) }
     }
 
+    fun updateAuthEmail(value: String) {
+        _uiState.update { it.copy(authEmail = value, authErrorMessage = null, authInfoMessage = null) }
+    }
+
     fun updateAuthPassword(value: String) {
         _uiState.update { it.copy(authPassword = value, authErrorMessage = null, authInfoMessage = null) }
     }
 
     fun updateAuthConfirmPassword(value: String) {
         _uiState.update { it.copy(authConfirmPassword = value, authErrorMessage = null, authInfoMessage = null) }
+    }
+
+    fun updateAuthVerificationCode(value: String) {
+        _uiState.update {
+            it.copy(
+                authVerificationCode = value.filter(Char::isDigit).take(6),
+                authErrorMessage = null,
+                authInfoMessage = null,
+            )
+        }
+    }
+
+    fun sendAuthVerificationCode() {
+        val repository = authRepository
+        if (repository == null) {
+            _uiState.update { it.copy(authErrorMessage = "认证模块暂不可用") }
+            return
+        }
+        val snapshot = _uiState.value
+        val username = AuthInputValidator.normalizeUsername(snapshot.authUsername)
+        val email = AuthInputValidator.normalizeEmail(snapshot.authEmail)
+        val validationError = AuthInputValidator.validateUsername(username)
+            ?: AuthInputValidator.validateEmail(email)
+        if (validationError != null) {
+            _uiState.update { it.copy(authErrorMessage = validationError) }
+            return
+        }
+
+        _uiState.update {
+            it.copy(
+                authUsername = username,
+                authEmail = email,
+                isAuthCodeSending = true,
+                authErrorMessage = null,
+                authInfoMessage = null,
+            )
+        }
+        viewModelScope.launch {
+            runCatching { repository.sendRegistrationCode(username, email) }
+                .onSuccess {
+                    _uiState.update { state ->
+                        state.copy(
+                            isAuthCodeSending = false,
+                            authInfoMessage = "验证码已发送，请查看邮箱",
+                        )
+                    }
+                }
+                .onFailure { error ->
+                    _uiState.update { state ->
+                        state.copy(
+                            isAuthCodeSending = false,
+                            authErrorMessage = error.message ?: "验证码发送失败",
+                        )
+                    }
+                }
+        }
     }
 
     fun continueAsGuest() {
@@ -241,8 +305,15 @@ class TranslateViewModel(
 
         val snapshot = _uiState.value
         val username = AuthInputValidator.normalizeUsername(snapshot.authUsername)
+        val email = AuthInputValidator.normalizeEmail(snapshot.authEmail)
         val validationError = if (snapshot.authMode == AuthMode.REGISTER) {
-            AuthInputValidator.validateRegistration(username, snapshot.authPassword, snapshot.authConfirmPassword)
+            AuthInputValidator.validateRegistration(
+                username = username,
+                email = email,
+                password = snapshot.authPassword,
+                confirmPassword = snapshot.authConfirmPassword,
+                verificationCode = snapshot.authVerificationCode,
+            )
         } else {
             AuthInputValidator.validateUsername(username) ?: AuthInputValidator.validatePassword(snapshot.authPassword)
         }
@@ -262,7 +333,7 @@ class TranslateViewModel(
         viewModelScope.launch {
             runCatching {
                 if (snapshot.authMode == AuthMode.REGISTER) {
-                    repository.register(username, snapshot.authPassword)
+                    repository.register(username, email, snapshot.authPassword, snapshot.authVerificationCode)
                 } else {
                     repository.login(username, snapshot.authPassword)
                 }
@@ -273,6 +344,7 @@ class TranslateViewModel(
                         authGuestMode = false,
                         authPassword = "",
                         authConfirmPassword = "",
+                        authVerificationCode = "",
                         isAuthLoading = false,
                         authInfoMessage = "已登录：${session.user.username}",
                     )
@@ -302,6 +374,7 @@ class TranslateViewModel(
                     authGuestMode = false,
                     authPassword = "",
                     authConfirmPassword = "",
+                    authVerificationCode = "",
                     authInfoMessage = "已退出登录",
                     authErrorMessage = null,
                 )

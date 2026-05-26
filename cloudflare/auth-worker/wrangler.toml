@@ -2,6 +2,10 @@ name = "ai-translate-auth"
 main = "src/index.js"
 compatibility_date = "2026-05-26"
 
+[vars]
+RESEND_FROM_EMAIL = "AI Translate <noreply@send.204152.xyz>"
+REQUIRE_EMAIL_VERIFICATION = "true"
+
 [[d1_databases]]
 binding = "DB"
 database_name = "ai_translate_auth"

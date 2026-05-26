@@ -1,17 +1,17 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-05-26T21:00:40+08:00",
+  "updatedAt": "2026-05-26T21:41:02+08:00",
   "android": {
-    "versionCode": 8,
-    "versionName": "1.0.7",
+    "versionCode": 9,
+    "versionName": "1.0.8",
     "required": false,
-    "apkUrl": "https://download.204152.xyz/releases/ai-translate-1.0.7-debug.apk",
-    "sha256": "7C9093B5191DF8DB6C2CC18CFE5E7A0ABCD691DD62E4928FF51BF2654A50E724",
-    "sizeBytes": 257485351,
+    "apkUrl": "https://download.204152.xyz/releases/ai-translate-1.0.8-debug.apk",
+    "sha256": "6D4E68F8A65931EA435F3E6AF6B0D533E1F8BE210E983E18CE98F3800A5BB804",
+    "sizeBytes": 257501735,
     "notes": [
-      "新增 Cloudflare 后端账号体系，支持注册、登录、退出登录和登录态保存。",
-      "登录后翻译历史会尝试同步到云端 D1 数据库，离线和游客模式仍可本机使用。",
-      "设置页新增账号与同步入口，可查看当前登录状态和后端服务地址。"
+      "注册流程新增邮箱验证码，验证码邮件通过 Resend 和 Cloudflare 子域名发送。",
+      "后端已强制校验邮箱验证码，提升课程项目账号注册安全性。",
+      "注册页新增邮箱、验证码输入和发送验证码按钮，登录与游客模式保持不变。"
     ]
   }
 }

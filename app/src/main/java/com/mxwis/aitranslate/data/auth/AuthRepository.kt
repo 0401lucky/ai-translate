@@ -6,7 +6,8 @@ import kotlinx.coroutines.flow.first
 
 interface AuthRepositoryContract {
     val session: Flow<AuthSession?>
-    suspend fun register(username: String, password: String): AuthSession
+    suspend fun sendRegistrationCode(username: String, email: String)
+    suspend fun register(username: String, email: String, password: String, verificationCode: String): AuthSession
     suspend fun login(username: String, password: String): AuthSession
     suspend fun logout()
 }
@@ -21,10 +22,24 @@ class AuthRepository(
 ) : AuthRepositoryContract, RemoteHistorySync {
     override val session: Flow<AuthSession?> = sessionStore.session
 
-    override suspend fun register(username: String, password: String): AuthSession {
+    override suspend fun sendRegistrationCode(username: String, email: String) {
+        apiClient.sendRegistrationCode(
+            username = AuthInputValidator.normalizeUsername(username),
+            email = AuthInputValidator.normalizeEmail(email),
+        )
+    }
+
+    override suspend fun register(
+        username: String,
+        email: String,
+        password: String,
+        verificationCode: String,
+    ): AuthSession {
         val result = apiClient.register(
             username = AuthInputValidator.normalizeUsername(username),
+            email = AuthInputValidator.normalizeEmail(email),
             password = password,
+            verificationCode = verificationCode.trim(),
         )
         return saveResult(result)
     }

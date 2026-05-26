@@ -24,11 +24,21 @@ wrangler d1 migrations apply ai_translate_auth
 wrangler secret put JWT_SECRET
 ```
 
+5. 若启用邮箱验证码，先在 Resend 添加并验证发信子域名，例如 `send.204152.xyz`，再配置 Resend API Key：
+
+```bash
+wrangler secret put RESEND_API_KEY
+```
+
 本地开发时也需要在 `.dev.vars` 中提供同名变量：
 
 ```text
 JWT_SECRET=replace-with-local-dev-secret
+RESEND_API_KEY=re_xxxxxxxxx
 ```
+
+默认发信地址在 `wrangler.toml` 中配置为 `AI Translate <noreply@send.204152.xyz>`。
+当前 `REQUIRE_EMAIL_VERIFICATION=false`，用于兼容已经发布的旧版 App；确认 Resend 可发信并发布新版客户端后，可改为 `true` 强制注册验证码。
 
 5. 本地开发或部署：
 
