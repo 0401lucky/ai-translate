@@ -1859,3 +1859,41 @@
 - `git diff --check`：通过，仅有 Windows 换行提示。
 - 发布前 review 结论：仓库内未出现 Resend API Key 明文；`RESEND_API_KEY` 只在 Worker Secret 中；未纳入无关 Word 预览临时文件；R2 旧版本 APK 未删除。
 - 已提交并推送 GitHub `main`。
+
+## Task 047：修复 Cloudflare PBKDF2 迭代上限导致注册失败
+
+### 目标
+
+修复用户在 App 注册时遇到的后端错误：`Pbkdf2 failed: iteration counts above 100000 are not supported (requested 120000)`。该问题发生在 Worker 使用 PBKDF2 生成密码哈希时，当前迭代数超过 Cloudflare Worker 运行时支持范围。
+
+### 范围
+
+- 将 Worker 密码哈希 PBKDF2 迭代数从 `120000` 调整为 `100000`。
+- 保持已存储哈希格式不变。
+- 运行后端测试。
+- 部署 Worker。
+- 线上验证注册接口不会再因 PBKDF2 迭代上限报错。
+
+### 不包含
+
+- 不重新构建 APK；本次是纯后端修复。
+- 不修改 Resend API Key、R2 更新清单或 Android UI。
+- 不删除 D1 现有数据。
+
+### 完成标准
+
+- Worker 单元测试通过。
+- Worker 部署成功。
+- 线上注册接口在验证码参数存在但验证码无效的情况下返回业务错误，而不是 PBKDF2 运行时错误。
+
+### 验证记录
+
+- 已将 Worker 密码哈希 PBKDF2 迭代数调整为 `100000`，避免超过 Cloudflare Worker 运行时上限。
+- `node --test test/*.test.js`：通过，6 项后端安全/认证/验证码测试 0 failure。
+- `wrangler deploy --dry-run`：通过，确认绑定包含 `env.DB`、`env.RESEND_FROM_EMAIL` 和 `env.REQUIRE_EMAIL_VERIFICATION ("true")`。
+- Worker 已部署到 `https://ai-translate-auth.jiezhi858.workers.dev`，当前版本 ID 为 `338f1fa8-fbe1-4ae9-a9d9-a71bd6e23705`。
+- 线上 `/auth/register` 使用不存在的验证码记录调用，返回 `400` 和 `请先获取邮箱验证码`，未再返回 PBKDF2 迭代上限运行时错误。
+- `git diff --check`：通过，仅有 Windows 换行提示。
+- 已扫描仓库，未发现 Resend API Key 形态的明文密钥。
+- 本次为纯 Worker 后端修复，未重新构建 APK，1.0.8 客户端无需更新即可生效。
+- 已完成 review、提交并推送 GitHub。

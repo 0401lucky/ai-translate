@@ -583,3 +583,11 @@
 - [x] 构建 1.0.8 Debug APK 并上传 R2 内置更新。
 - [x] 运行后端测试、Kotlin 编译、关键单测和公开 URL 校验。
 - [x] 完成 review、提交并推送 GitHub。
+
+## 2026-05-26：修复 Cloudflare PBKDF2 迭代上限导致注册失败
+
+- [x] 明确完成标准：注册不再出现 `Pbkdf2 failed: iteration counts above 100000 are not supported`，Worker 测试通过并部署。
+- [x] 将 Worker 密码哈希 PBKDF2 迭代数从 `120000` 调整为 `100000`。
+- [x] 运行 Worker 后端测试。
+- [x] 部署 Worker 并验证线上注册接口不再触发 PBKDF2 上限错误。
+- [x] 提交并推送 GitHub。
