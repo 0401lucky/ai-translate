@@ -2,6 +2,10 @@ package com.mxwis.aitranslate.di
 
 import android.content.Context
 import androidx.room.Room
+import com.mxwis.aitranslate.BuildConfig
+import com.mxwis.aitranslate.data.auth.AuthApiClient
+import com.mxwis.aitranslate.data.auth.AuthRepository
+import com.mxwis.aitranslate.data.auth.AuthSessionStore
 import com.mxwis.aitranslate.data.dictionary.AssetDictionaryRepository
 import com.mxwis.aitranslate.data.history.AppDatabase
 import com.mxwis.aitranslate.data.model.HyMtModelManager
@@ -32,6 +36,11 @@ class AppContainer(context: Context) {
     ).build()
 
     private val settingsStore = SettingsStore(appContext)
+    private val authSessionStore = AuthSessionStore(appContext)
+    val authRepository = AuthRepository(
+        sessionStore = authSessionStore,
+        apiClient = AuthApiClient(httpClient, BuildConfig.AUTH_BASE_URL),
+    )
     private val modelManager = HyMtModelManager(appContext, httpClient)
     private val mlKitLanguageModelManager = MlKitLanguageModelManager()
     val imageTextRecognizer = MlKitImageTextRecognizer(appContext)
@@ -46,5 +55,6 @@ class AppContainer(context: Context) {
         offlineEngine = OfflineTranslationEngine(modelManager),
         mlKitEngine = MlKitTranslationEngine(),
         appUpdateManager = AppUpdateManager(appContext, httpClient),
+        remoteHistorySync = authRepository,
     )
 }

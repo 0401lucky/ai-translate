@@ -3,6 +3,10 @@ package com.mxwis.aitranslate.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mxwis.aitranslate.BuildConfig
+import com.mxwis.aitranslate.data.auth.AuthInputValidator
+import com.mxwis.aitranslate.data.auth.AuthMode
+import com.mxwis.aitranslate.data.auth.AuthRepositoryContract
+import com.mxwis.aitranslate.data.auth.AuthSession
 import com.mxwis.aitranslate.data.dictionary.DictionaryEntry
 import com.mxwis.aitranslate.data.dictionary.DictionaryRepositoryContract
 import com.mxwis.aitranslate.data.dictionary.DictionaryWordSummary
@@ -50,6 +54,15 @@ data class TranslateUiState(
     val targetLanguage: LanguageOption = Languages.supported.first(),
     val selectedMode: TranslationMode = TranslationMode.CLOUD,
     val settings: AppSettings = AppSettings(),
+    val authSession: AuthSession? = null,
+    val authGuestMode: Boolean = false,
+    val authMode: AuthMode = AuthMode.LOGIN,
+    val authUsername: String = "",
+    val authPassword: String = "",
+    val authConfirmPassword: String = "",
+    val isAuthLoading: Boolean = false,
+    val authErrorMessage: String? = null,
+    val authInfoMessage: String? = null,
     val modelState: ModelState = ModelState(),
     val histories: List<TranslationHistoryEntity> = emptyList(),
     val availableModels: List<String> = emptyList(),
@@ -107,6 +120,7 @@ class TranslateViewModel(
     private val repository: TranslationRepositoryContract,
     private val imageTextRecognizer: ImageTextRecognizerContract? = null,
     private val dictionaryRepository: DictionaryRepositoryContract? = null,
+    private val authRepository: AuthRepositoryContract? = null,
     private val currentVersionCode: Int = BuildConfig.VERSION_CODE,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(TranslateUiState())
@@ -169,6 +183,129 @@ class TranslateViewModel(
         }
         viewModelScope.launch {
             repository.refreshMlKitLanguageModels()
+        }
+        authRepository?.let { repository ->
+            viewModelScope.launch {
+                repository.session.collect { session ->
+                    _uiState.update { state ->
+                        state.copy(
+                            authSession = session,
+                            authGuestMode = if (session != null) false else state.authGuestMode,
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    fun switchAuthMode(mode: AuthMode) {
+        _uiState.update {
+            it.copy(
+                authMode = mode,
+                authPassword = "",
+                authConfirmPassword = "",
+                authErrorMessage = null,
+                authInfoMessage = null,
+            )
+        }
+    }
+
+    fun updateAuthUsername(value: String) {
+        _uiState.update { it.copy(authUsername = value, authErrorMessage = null, authInfoMessage = null) }
+    }
+
+    fun updateAuthPassword(value: String) {
+        _uiState.update { it.copy(authPassword = value, authErrorMessage = null, authInfoMessage = null) }
+    }
+
+    fun updateAuthConfirmPassword(value: String) {
+        _uiState.update { it.copy(authConfirmPassword = value, authErrorMessage = null, authInfoMessage = null) }
+    }
+
+    fun continueAsGuest() {
+        _uiState.update {
+            it.copy(
+                authGuestMode = true,
+                authErrorMessage = null,
+                authInfoMessage = "已进入游客模式",
+            )
+        }
+    }
+
+    fun submitAuth() {
+        val repository = authRepository
+        if (repository == null) {
+            _uiState.update { it.copy(authErrorMessage = "认证模块暂不可用") }
+            return
+        }
+
+        val snapshot = _uiState.value
+        val username = AuthInputValidator.normalizeUsername(snapshot.authUsername)
+        val validationError = if (snapshot.authMode == AuthMode.REGISTER) {
+            AuthInputValidator.validateRegistration(username, snapshot.authPassword, snapshot.authConfirmPassword)
+        } else {
+            AuthInputValidator.validateUsername(username) ?: AuthInputValidator.validatePassword(snapshot.authPassword)
+        }
+        if (validationError != null) {
+            _uiState.update { it.copy(authErrorMessage = validationError) }
+            return
+        }
+
+        _uiState.update {
+            it.copy(
+                authUsername = username,
+                isAuthLoading = true,
+                authErrorMessage = null,
+                authInfoMessage = null,
+            )
+        }
+        viewModelScope.launch {
+            runCatching {
+                if (snapshot.authMode == AuthMode.REGISTER) {
+                    repository.register(username, snapshot.authPassword)
+                } else {
+                    repository.login(username, snapshot.authPassword)
+                }
+            }.onSuccess { session ->
+                _uiState.update {
+                    it.copy(
+                        authSession = session,
+                        authGuestMode = false,
+                        authPassword = "",
+                        authConfirmPassword = "",
+                        isAuthLoading = false,
+                        authInfoMessage = "已登录：${session.user.username}",
+                    )
+                }
+            }.onFailure { error ->
+                _uiState.update {
+                    it.copy(
+                        isAuthLoading = false,
+                        authErrorMessage = error.message ?: "登录失败，请稍后重试",
+                    )
+                }
+            }
+        }
+    }
+
+    fun logout() {
+        val repository = authRepository
+        if (repository == null) {
+            _uiState.update { it.copy(authSession = null, authGuestMode = false) }
+            return
+        }
+        viewModelScope.launch {
+            runCatching { repository.logout() }
+            _uiState.update {
+                it.copy(
+                    authSession = null,
+                    authGuestMode = false,
+                    authPassword = "",
+                    authConfirmPassword = "",
+                    authInfoMessage = "已退出登录",
+                    authErrorMessage = null,
+                )
+            }
         }
     }
 

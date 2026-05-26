@@ -1,0 +1,8 @@
+name = "ai-translate-auth"
+main = "src/index.js"
+compatibility_date = "2026-05-26"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ai_translate_auth"
+database_id = "25da98df-9127-4637-a092-29cab787d762"

@@ -74,7 +74,7 @@ Google ML Kit 是第二个轻量离线模型选项，免费、无需 API Key，�
 - Bucket：`ai-translate-assets`
 - 正式域名：`https://download.204152.xyz`
 - 更新清单：`https://download.204152.xyz/releases/latest.json`
-- Debug 测试包示例：`https://download.204152.xyz/releases/ai-translate-1.0.6-debug.apk`
+- Debug 测试包示例：`https://download.204152.xyz/releases/ai-translate-1.0.7-debug.apk`
 
 后续 Debug 测试发版可执行：
 
@@ -109,6 +109,9 @@ app/
 ├── src/main/res/      # 字符串、主题、图标和 Lobe Icons 资源
 └── src/test/          # 单元测试
 
+cloudflare/
+└── auth-worker/       # Workers + D1 登录注册后端
+
 docs/
 ├── task文档.md        # 按任务记录目标、范围、完成标准和验证结果
 ├── todo日志.md        # 执行日志和验证清单
@@ -119,9 +122,9 @@ docs/
 
 ## 当前验证状态
 
-- `testDebugUnitTest`：1.0.6 发版前关键测试组通过；全量测试按 60 秒上限执行超时，未得到新的完整报告。
-- `assembleDebug`：1.0.6 发版脚本内构建通过。
-- R2 更新清单：`https://download.204152.xyz/releases/latest.json` 当前可访问；1.0.6 Debug 更新包由 `scripts/publish-r2-debug-update.ps1` 上传，大小 `257436140` 字节，SHA256 为 `E6C498C403B7D2A8CCFA39094B2206D522284F9AF2A3DE90FB4D9744838124D7`。
+- `testDebugUnitTest`：1.0.7 发版前关键测试组通过。
+- `assembleDebug`：1.0.7 发版脚本内构建通过。
+- R2 更新清单：`https://download.204152.xyz/releases/latest.json` 当前可访问；1.0.7 Debug 更新包由 `scripts/publish-r2-debug-update.ps1` 上传，大小 `257485351` 字节，SHA256 为 `7C9093B5191DF8DB6C2CC18CFE5E7A0ABCD691DD62E4928FF51BF2654A50E724`。
 - 系统文本朗读：1.0.2 已补齐 TTS 引擎检测、语音包安装入口、系统设置修复入口和语言候选回退。
 - Q4_K_M 离线翻译：已在真机验证，`hi` 可翻译为 `嗨`。
 - 系统划词/分享、剪贴板提示、悬浮球：代码与构建产物已就绪；悬浮球已在 Chrome 真机验证，不会再跳回 AI 翻译主界面。

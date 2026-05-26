@@ -10,9 +10,11 @@ android {
 
     val resolvedVersionCode = providers.gradleProperty("appVersionCode")
         .map(String::toInt)
-        .getOrElse(7)
+        .getOrElse(8)
     val resolvedVersionName = providers.gradleProperty("appVersionName")
-        .getOrElse("1.0.6")
+        .getOrElse("1.0.7")
+    val resolvedAuthBaseUrl = providers.gradleProperty("authBaseUrl")
+        .getOrElse("https://ai-translate-auth.jiezhi858.workers.dev")
 
     defaultConfig {
         applicationId = "com.mxwis.aitranslate"
@@ -20,6 +22,7 @@ android {
         targetSdk = 36
         versionCode = resolvedVersionCode
         versionName = resolvedVersionName
+        buildConfigField("String", "AUTH_BASE_URL", "\"$resolvedAuthBaseUrl\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

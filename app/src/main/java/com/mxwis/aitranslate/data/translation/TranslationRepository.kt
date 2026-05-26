@@ -1,5 +1,6 @@
 package com.mxwis.aitranslate.data.translation
 
+import com.mxwis.aitranslate.data.auth.RemoteHistorySync
 import com.mxwis.aitranslate.data.history.TranslationHistoryDao
 import com.mxwis.aitranslate.data.history.TranslationHistoryEntity
 import com.mxwis.aitranslate.data.model.HyMtModelManager
@@ -19,6 +20,7 @@ import com.mxwis.aitranslate.domain.TranslationMode
 import java.io.File
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
 
 interface TranslationRepositoryContract {
     val settings: Flow<AppSettings>
@@ -61,6 +63,7 @@ class TranslationRepository(
     private val offlineEngine: OfflineTranslationEngine,
     private val mlKitEngine: MlKitTranslationEngine,
     private val appUpdateManager: AppUpdateManager,
+    private val remoteHistorySync: RemoteHistorySync? = null,
 ) : TranslationRepositoryContract {
     override val settings: Flow<AppSettings> = settingsStore.settings
     override val history: Flow<List<TranslationHistoryEntity>> = historyDao.observeAll()
@@ -106,16 +109,20 @@ class TranslationRepository(
             TranslationMode.AUTO -> translateAutomatically(request, settings)
         }
 
-        historyDao.insert(
-            TranslationHistoryEntity(
-                sourceText = request.sourceText,
-                translatedText = result.translatedText,
-                sourceLanguage = request.sourceLanguage.displayName,
-                targetLanguage = request.targetLanguage.displayName,
-                mode = result.displayModeLabel,
-                createdAt = System.currentTimeMillis(),
-            ),
+        val history = TranslationHistoryEntity(
+            sourceText = request.sourceText,
+            translatedText = result.translatedText,
+            sourceLanguage = request.sourceLanguage.displayName,
+            targetLanguage = request.targetLanguage.displayName,
+            mode = result.displayModeLabel,
+            createdAt = System.currentTimeMillis(),
         )
+        historyDao.insert(history)
+        runCatching {
+            withTimeoutOrNull(3_000) {
+                remoteHistorySync?.syncHistory(history)
+            }
+        }
         return result
     }
 

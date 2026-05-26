@@ -1571,3 +1571,177 @@
 - R2 公网验证通过：APK 地址返回 200，`Content-Length = 257436140`；`https://download.204152.xyz/releases/latest.json` 返回 200 且指向 `1.0.6 (7)`。
 - R2 manifest 已写入 SHA256：`E6C498C403B7D2A8CCFA39094B2206D522284F9AF2A3DE90FB4D9744838124D7`。
 - GitHub `main` 已推送 1.0.6 发版改动，提交为 `4dee3ca`。
+
+## Task 042：期末作业 Word 文档系统需求与系统设计补全
+
+### 目标
+
+基于当前 AI 翻译 App 的实际功能、技术栈和实现结构，补全 `封面.docx` 中第三章“系统需求分析”，并另起第四章“系统设计”，满足老师要求的功能需求、非功能需求、业务流程、类设计、数据库设计和系统架构设计内容。
+
+### 范围
+
+- 读取当前 Android 项目源码、任务文档和已有设计资料，确保文档内容来自真实项目。
+- 完善第三章“系统需求分析”：
+  - 系统功能需求分析。
+  - 系统非功能需求分析。
+  - 插入功能模块划分图、用例图等必要图示。
+- 新增第四章“系统设计”：
+  - 至少 3 项核心业务流程设计，并配流程图或活动图。
+  - 类设计，并包含类图。
+  - 数据库设计。
+  - 系统架构设计，并包含架构图。
+- 保留原文档既有封面、前置章节和整体样式，不做无关重排。
+
+### 不包含
+
+- 不修改 Android App 功能代码。
+- 不新增 APK 内置大模型文件。
+- 不重写封面、摘要、目录以外的无关章节。
+
+### 完成标准
+
+- 第三章内容完整覆盖功能需求和非功能需求。
+- 第四章作为独立章节插入，覆盖业务流程、类设计、数据库设计和系统架构设计。
+- 文档中的图示清晰可读，并与当前项目实际模块一致。
+- Word 文档能成功打开，渲染检查无明显文字溢出、图片缺失或版面重叠。
+
+### 验证记录
+
+- 已读取当前项目源码、README、任务文档和 `软件开发类毕设绘图要点讲解.pdf`，按功能模块图、用例图、活动图、ER 图、类图和架构图的要求组织内容。
+- 已生成并插入 9 张图示：功能模块划分图、用例图、系统架构图、文本翻译活动图、图片 OCR 翻译活动图、离线模型下载与校验活动图、悬浮窗快捷翻译活动图、核心类图、数据库 ER 图。
+- 已将 `封面.docx` 整理为：第二章相关技术介绍、第三章系统需求分析、第四章系统设计。
+- 第三章已补全系统目标、用户角色、功能需求、用例说明和非功能需求分析。
+- 第四章已补全系统架构设计、4 项核心业务流程设计、类设计和数据库设计。
+- `render_docx.py` 因本机缺少 LibreOffice/soffice 未能执行；已改用 Microsoft Word COM 导出 PDF 预览。
+- Word 导出 PDF 成功，预览为 14 页；已检查章节顺序、图题、页脚、第二章重复标题、关键图示页面，无明显图片缺失、文字重叠或版面溢出。
+- 已创建原文档备份：`D:\code\app开发\封面_补全前备份_20260522.docx`。
+- 用户反馈图 3-1 功能模块划分图存在横线遮挡模块框和文字的问题，已重绘为分层总线结构，连线不再穿过文字或模块框。
+- 用户反馈图 3-2 用例图用户关联线过少，已恢复用户到各用例的关联线，并保留外部服务依赖虚线。
+- 已重新导出 PDF 预览，检查图 3-1 和图 3-2 在 Word 中显示正常。
+
+## Task 043：Cloudflare 后端登录注册与账号体系接入
+
+### 目标
+
+为 AI 翻译 App 增加课程要求所需的注册、登录和服务器端账号能力。后端采用 Cloudflare Workers 实现 HTTPS API，Cloudflare D1 作为云端关系型数据库；Android 客户端接入注册、登录、退出登录、登录态保存和用户历史同步入口。
+
+### 范围
+
+- 检索 Cloudflare 官方文档，确认 Workers、D1、Web Crypto 和 Wrangler 配置方式。
+- 使用 imagegen 生成登录/注册 UI 设计图并保存到 `docs/ui/`。
+- 新增 Cloudflare Worker 后端工程：
+  - 注册接口。
+  - 登录接口。
+  - 当前用户接口。
+  - 翻译历史上传和查询接口。
+  - D1 数据库 schema。
+- Android 端新增认证数据层：
+  - 登录态 DataStore。
+  - Auth API 客户端。
+  - AuthRepository。
+- Android 端新增登录/注册界面：
+  - 未登录时进入认证界面。
+  - 登录后进入现有主应用。
+  - 设置页提供账号状态和退出登录入口。
+- 翻译成功后在本地保存历史的同时，若用户已登录则尝试同步到云端历史接口。
+
+### 不包含
+
+- 本次不部署到生产 Cloudflare 账号，不写入真实 `database_id` 或生产密钥。
+- 本次不修改 `封面.docx` 或 App 设计 Word 文档，文档可后续统一更新。
+- 不上传 API Key 等敏感配置到云端。
+- 不强制登录后才能使用离线翻译；未登录仍可在本机体验基础翻译能力。
+
+### 完成标准
+
+- 后端 Worker 代码、D1 schema 和 Wrangler 配置齐全，可本地开发和后续部署。
+- Android 端能注册、登录、退出登录，并保存/清除 token。
+- App 未登录显示认证界面，登录后显示现有主界面。
+- 设置页能看到当前账号状态和退出登录入口。
+- 翻译历史在登录状态下会尝试同步到后端。
+- Kotlin 编译、关键单测和后端单元测试通过。
+
+### 验证记录
+
+- 已检索 Cloudflare 官方文档，采用 Workers 提供 HTTPS API、D1 作为关系型数据库、Web Crypto 完成 PBKDF2 密码哈希与 HMAC token 签名，Wrangler 配置 D1 binding。
+- 已使用 imagegen 生成登录/注册 UI 设计图：`docs/ui/auth-login-register-design.png`。
+- 已新增 `cloudflare/auth-worker/`：
+  - `src/index.js`：注册、登录、当前用户、退出、历史上传/查询、用户设置读写接口。
+  - `migrations/0001_init.sql`：用户表、翻译历史表、用户设置表。
+  - `wrangler.toml`：Worker 与 D1 binding 配置模板，不包含真实 `database_id`。
+  - `test/security.test.js`：账号校验、密码哈希验证和 token 签名过期测试。
+- 已新增 Android 认证数据层：
+  - `AuthSessionStore` 使用 DataStore 保存 token 和用户信息。
+  - `AuthApiClient` 调用 Worker 登录、注册和历史同步接口。
+  - `AuthRepository` 统一登录态与历史同步入口。
+- 已将认证状态接入 `TranslateViewModel` 和 `AiTranslateApp`：
+  - 未登录时显示登录/注册界面。
+  - 支持游客模式继续使用本机功能。
+  - 设置页新增“账号与同步”，可查看账号状态并退出登录。
+- 已将 `TranslationRepository` 的本地历史保存流程接入远端历史同步；同步最多等待 3 秒，失败不会阻塞翻译结果返回。
+- 已新增 Gradle 参数 `-PauthBaseUrl=...`，用于构建时覆盖 Worker 后端地址；默认使用占位 Worker 地址。
+- `node --test test/*.test.js`：通过，4 项后端安全/认证测试 0 failure。
+- `.\gradlew.bat :app:compileDebugKotlin --console=plain`：通过。
+- `.\gradlew.bat :app:testDebugUnitTest --tests "com.mxwis.aitranslate.data.auth.AuthInputValidatorTest" --tests "com.mxwis.aitranslate.ui.TranslateViewModelTest" --console=plain`：通过。
+- 自查结论：未写入真实 Cloudflare `database_id`、JWT 密钥或生产 API Key；历史同步失败路径已做容错；本次未修改 `封面.docx` 或 App 设计 Word 文档。
+
+## Task 044：发布 1.0.7 登录注册与 Cloudflare 后端版本
+
+### 目标
+
+完成登录注册后端的 Cloudflare 线上部署，并发布 Android `1.0.7 (8)` Debug 更新包到 R2，使 App 内置更新能够检测并下载新版。
+
+### 范围
+
+- 检查 Wrangler 登录态和 Cloudflare 账号可用性。
+- 创建或复用 `ai_translate_auth` D1 数据库。
+- 将 D1 `database_id` 写入 Worker 配置。
+- 应用 D1 远端迁移。
+- 设置 Worker `JWT_SECRET` 密钥。
+- 部署 `ai-translate-auth` Worker。
+- 将 Android 默认版本提升为 `1.0.7 (8)`。
+- 将 Android 默认认证后端地址改为线上 Worker 地址。
+- 构建 Debug APK，上传到 R2，并更新 `releases/latest.json`。
+- 运行必要验证并推送 GitHub。
+
+### 不包含
+
+- 不删除任何 Cloudflare 资源。
+- 不覆盖已有 R2 旧版本 APK。
+- 不提交生产密钥。
+- 不提交与本次发布无关的 Word 预览临时文件。
+
+### 完成标准
+
+- Worker 线上接口可访问，未登录访问 `/auth/me` 返回认证错误。
+- D1 远端迁移已应用。
+- R2 `latest.json` 指向 `1.0.7 (8)`。
+- Debug APK 构建通过，关键测试通过。
+- 相关源码、配置、文档和发布清单已提交并推送 GitHub。
+
+### 验证记录
+
+- Wrangler `4.90.0` 已登录 Cloudflare，账号具备 Workers、D1 和 R2 写权限。
+- 已创建 D1 数据库 `ai_translate_auth`，`database_id = 25da98df-9127-4637-a092-29cab787d762`。
+- 已应用远端 D1 迁移 `0001_init.sql`，远端表包含 `users`、`translation_history`、`user_settings` 和 `d1_migrations`。
+- Worker dry-run 通过，D1 binding 为 `env.DB (ai_translate_auth)`。
+- Worker 已部署到 `https://ai-translate-auth.jiezhi858.workers.dev`，当前版本 ID 为 `bc2d4c27-74ac-41c7-9eb4-da255f66fdf7`。
+- 已通过 `wrangler secret put JWT_SECRET` 设置 Worker 密钥；`wrangler secret list` 可见 `JWT_SECRET`，未写入仓库。
+- 已在 Worker 代码中移除固定开发密钥兜底；线上缺少 `JWT_SECRET` 时会直接返回服务端配置错误。
+- 线上 `/auth/me` 未带 token 访问返回 `401`，响应体为 `{"message":"请先登录"}`，符合认证拦截预期。
+- 已将 App 默认版本号更新为 `1.0.7 (8)`。
+- 已将 App 默认认证后端地址更新为 `https://ai-translate-auth.jiezhi858.workers.dev`。
+- 已更新 R2 发版脚本默认参数和 1.0.7 更新说明。
+- 已执行 `.\scripts\publish-r2-debug-update.ps1`，Debug APK 构建成功并上传：
+  - APK：`https://download.204152.xyz/releases/ai-translate-1.0.7-debug.apk`
+  - 大小：`257485351` 字节。
+  - SHA256：`7C9093B5191DF8DB6C2CC18CFE5E7A0ABCD691DD62E4928FF51BF2654A50E724`。
+- R2 公开校验通过：
+  - APK `HEAD` 返回 `200`，`Content-Length = 257485351`。
+  - `https://download.204152.xyz/releases/latest.json` 返回 `1.0.7 (8)`。
+- 本地 `app/build/outputs/apk/debug/output-metadata.json` 已确认 `versionCode = 8`、`versionName = 1.0.7`。
+- `node --test test/*.test.js`：通过，4 项后端安全/认证测试 0 failure。
+- `.\gradlew.bat :app:testDebugUnitTest --tests "com.mxwis.aitranslate.data.auth.AuthInputValidatorTest" --tests "com.mxwis.aitranslate.ui.TranslateViewModelTest" --console=plain`：通过。
+- `git diff --check`：通过，仅有 Windows 换行提示。
+- 发布前 review 结论：未提交 JWT 密钥或生产 API Key；未纳入无关 Word 预览临时文件；R2 旧版本 APK 未删除。
+- 已提交并推送 GitHub `main`。

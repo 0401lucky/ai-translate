@@ -18,10 +18,12 @@ class MainActivity : ComponentActivity() {
         val repository = (application as AiTranslateApplication).container.repository
         viewModelFactory {
             initializer {
+                val container = (application as AiTranslateApplication).container
                 TranslateViewModel(
                     repository = repository,
-                    imageTextRecognizer = (application as AiTranslateApplication).container.imageTextRecognizer,
-                    dictionaryRepository = (application as AiTranslateApplication).container.dictionaryRepository,
+                    imageTextRecognizer = container.imageTextRecognizer,
+                    dictionaryRepository = container.dictionaryRepository,
+                    authRepository = container.authRepository,
                 )
             }
         }

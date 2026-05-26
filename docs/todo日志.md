@@ -516,3 +516,47 @@
 - [x] 执行 R2 发版脚本并验证公开更新清单，`latest.json` 已指向 `1.0.6 (7)`。
 - [x] 提交并推送 GitHub `main`。
 - [x] 回写验证结果到 Task 文档和 TODO 日志。
+
+## 2026-05-22：期末作业 Word 文档系统需求与系统设计补全
+
+- [x] 明确完成标准：第三章补全系统需求分析，第四章独立新增系统设计，图示清晰可读，并完成 Word 渲染检查。
+- [x] 更新 `docs/task文档.md`，新增 Task 042。
+- [x] 梳理当前 AI 翻译 App 实际功能、技术栈、数据存储和核心流程。
+- [x] 分析 `封面.docx` 现有章节结构与可替换区域。
+- [x] 参考 `软件开发类毕设绘图要点讲解.pdf`，生成需求分析和系统设计所需图示。
+- [x] 写入 Word 文档并保持原有样式，修正第二章重复编号和页脚旧页数。
+- [x] 使用 Microsoft Word 导出 PDF 预览并检查排版；`render_docx.py` 因缺少 LibreOffice/soffice 未执行成功。
+- [x] 回写验证结果到 Task 文档和 TODO 日志。
+
+## 2026-05-22：修正功能模块划分图连线遮挡
+
+- [x] 明确完成标准：图 3-1 的连线不再穿过模块框和文字，Word 中替换后预览正常。
+- [x] 重绘功能模块划分图，模块内部连线只保留在框与框之间的空白区域。
+- [x] 同步调整用例图，恢复用户到各用例的关联线，并避免线条穿过文字。
+- [x] 替换 `封面.docx` 中图 3-1 和图 3-2。
+- [x] 重新导出 PDF 并检查图 3-1、图 3-2 排版。
+- [x] 回写验证结果。
+
+## 2026-05-26：Cloudflare 后端登录注册与账号体系接入
+
+- [x] 明确完成标准：具备可部署的 Workers + D1 后端，Android 支持注册/登录/退出和登录态保存，登录后可同步翻译历史。
+- [x] 更新 `docs/task文档.md`，新增 Task 043。
+- [x] 检索 Cloudflare 官方文档并确定后端技术方案：Workers + D1 + Web Crypto + Wrangler D1 binding。
+- [x] 使用 imagegen 生成登录/注册 UI 设计图，保存到 `docs/ui/auth-login-register-design.png`。
+- [x] 新增 Cloudflare Worker 后端、D1 schema 和测试。
+- [x] 新增 Android 认证数据层和云端历史同步客户端。
+- [x] 新增登录/注册 UI 和设置页账号入口。
+- [x] 运行后端测试、Kotlin 编译和关键单测。
+- [x] 完成代码 review 并回写验证结果。
+
+## 2026-05-26：发布 1.0.7 登录注册与 Cloudflare 后端版本
+
+- [x] 明确完成标准：Cloudflare Worker 与 D1 远端可用，App 默认后端地址指向线上 Worker，1.0.7 Debug 包发布到 R2 内置更新，并推送 GitHub。
+- [x] 确认工作区存在无关未跟踪 Word 预览文件，本次提交只纳入登录后端、1.0.7 发布和文档记录相关文件。
+- [x] 检查 Wrangler 登录态、D1 数据库和 Worker 配置。
+- [x] 创建 D1 数据库 `ai_translate_auth` 并应用远端迁移。
+- [x] 设置 Worker JWT 密钥并部署 Worker：`https://ai-translate-auth.jiezhi858.workers.dev`。
+- [x] 将 App 默认版本号提升为 `1.0.7 (8)`，默认认证后端指向线上 Worker。
+- [x] 构建 1.0.7 Debug APK 并上传 R2 内置更新。
+- [x] 运行后端测试、Kotlin 编译、关键单测和公开 URL 校验。
+- [x] 完成发布前 review、提交并推送 GitHub。

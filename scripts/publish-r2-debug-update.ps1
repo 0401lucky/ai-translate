@@ -1,13 +1,14 @@
 param(
-    [int]$VersionCode = 7,
-    [string]$VersionName = "1.0.6",
+    [int]$VersionCode = 8,
+    [string]$VersionName = "1.0.7",
+    [string]$AuthBaseUrl = "https://ai-translate-auth.jiezhi858.workers.dev",
     [string]$Bucket = "ai-translate-assets",
     [string]$PublicBaseUrl = "https://download.204152.xyz",
-    [string]$ApkObjectKey = "releases/ai-translate-1.0.6-debug.apk",
+    [string]$ApkObjectKey = "releases/ai-translate-1.0.7-debug.apk",
     [string[]]$Notes = @(
-        "新增 Google ML Kit 设备端离线翻译模型，免费、无需 API Key，下载后可离线使用。",
-        "离线模型管理页新增 ML Kit 语种包列表，支持按语种查看、下载、删除和刷新状态。",
-        "自动模式云端失败后会回退到用户当前选择的离线模型，HY-MT 和 ML Kit 可自由切换。"
+        "新增 Cloudflare 后端账号体系，支持注册、登录、退出登录和登录态保存。",
+        "登录后翻译历史会尝试同步到云端 D1 数据库，离线和游客模式仍可本机使用。",
+        "设置页新增账号与同步入口，可查看当前登录状态和后端服务地址。"
     )
 )
 
@@ -21,7 +22,7 @@ $apkUrl = "$PublicBaseUrl/$ApkObjectKey"
 
 Push-Location $repoRoot
 try {
-    & .\gradlew.bat :app:assembleDebug --no-daemon --console=plain "-PappVersionCode=$VersionCode" "-PappVersionName=$VersionName"
+    & .\gradlew.bat :app:assembleDebug --no-daemon --console=plain "-PappVersionCode=$VersionCode" "-PappVersionName=$VersionName" "-PauthBaseUrl=$AuthBaseUrl"
     if ($LASTEXITCODE -ne 0) {
         throw "Debug APK 构建失败"
     }

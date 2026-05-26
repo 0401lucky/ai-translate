@@ -73,6 +73,8 @@ import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
@@ -140,6 +142,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.mxwis.aitranslate.data.auth.AuthMode
 import com.mxwis.aitranslate.data.dictionary.DictionaryEntry
 import com.mxwis.aitranslate.data.dictionary.DictionaryWordSummary
 import com.mxwis.aitranslate.data.history.TranslationHistoryEntity
@@ -166,60 +169,214 @@ fun AiTranslateApp(viewModel: TranslateViewModel) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     AiTranslateTheme {
-        AiTranslateContent(
-            state = uiState,
-            onSectionSelected = viewModel::selectSection,
-            onSourceTextChanged = viewModel::updateSourceText,
-            onClearInput = viewModel::clearInput,
-            onOpenLanguagePicker = viewModel::openLanguagePicker,
-            onCloseLanguagePicker = viewModel::closeLanguagePicker,
-            onChooseLanguage = viewModel::chooseLanguage,
-            onSwapLanguages = viewModel::swapLanguages,
-            onTranslate = viewModel::translate,
-            onBaseUrlChanged = viewModel::updateBaseUrl,
-            onApiKeyChanged = viewModel::updateApiKey,
-            onProviderNameChanged = viewModel::updateProviderName,
-            onSelectCloudProvider = viewModel::selectCloudProvider,
-            onAddCloudProvider = viewModel::addCloudProvider,
-            onFetchCloudModels = viewModel::fetchCloudModels,
-            onOpenModelPicker = viewModel::openModelPicker,
-            onCloseModelPicker = viewModel::closeModelPicker,
-            onModelSearchChanged = viewModel::updateModelSearchQuery,
-            onModelToAddChanged = viewModel::updateModelToAdd,
-            onSelectCloudModel = viewModel::selectCloudModel,
-            onAddCustomModel = viewModel::addCustomModel,
-            onDefaultModeChanged = viewModel::updateDefaultMode,
-            onDownloadModel = viewModel::downloadModel,
-            onDeleteModel = viewModel::deleteModel,
-            onDeleteHistory = viewModel::deleteHistory,
-            onClearHistory = viewModel::clearHistory,
-            onOpenHistoryDetail = viewModel::openHistoryDetail,
-            onCloseHistoryDetail = viewModel::closeHistoryDetail,
-            onCloseMiniTranslator = viewModel::closeMiniTranslator,
-            onTranslateMini = viewModel::translateMini,
-            onConsumeMiniAutoTranslateRequest = viewModel::consumeMiniAutoTranslateRequest,
-            onOpenFullTranslateFromMini = viewModel::openFullTranslateFromMini,
-            onAcceptClipboardQuickTranslate = viewModel::acceptClipboardQuickTranslate,
-            onDismissClipboardQuickTranslate = viewModel::dismissClipboardQuickTranslate,
-            onCheckAppUpdate = viewModel::checkAppUpdate,
-            onDownloadAppUpdate = viewModel::downloadAppUpdate,
-            onConsumeAppUpdateInstallRequest = viewModel::consumeAppUpdateInstallRequest,
-            onOpenUnifiedModelPicker = viewModel::openUnifiedModelPicker,
-            onCloseUnifiedModelPicker = viewModel::closeUnifiedModelPicker,
-            onSelectUnifiedModel = viewModel::selectUnifiedModel,
-            onUpdateDefaultUnifiedModel = viewModel::updateDefaultUnifiedModel,
-            onRefreshMlKitLanguageModels = viewModel::refreshMlKitLanguageModels,
-            onDownloadMlKitLanguageModel = viewModel::downloadMlKitLanguageModel,
-            onDeleteMlKitLanguageModel = viewModel::deleteMlKitLanguageModel,
-            onOpenImageTranslator = viewModel::openImageTranslator,
-            onUpdateImageRecognizedText = viewModel::updateImageRecognizedText,
-            onTranslateImageText = viewModel::translateImageText,
-            onCloseImageTranslator = viewModel::closeImageTranslator,
-            onBringImageTranslationToHome = viewModel::bringImageTranslationToHome,
-            onDictionaryQueryChanged = viewModel::updateDictionaryQuery,
-            onLookupDictionary = viewModel::lookupDictionary,
-            onChooseDictionarySuggestion = viewModel::chooseDictionarySuggestion,
-        )
+        if (uiState.authSession == null && !uiState.authGuestMode) {
+            AuthScreen(
+                state = uiState,
+                onModeSelected = viewModel::switchAuthMode,
+                onUsernameChanged = viewModel::updateAuthUsername,
+                onPasswordChanged = viewModel::updateAuthPassword,
+                onConfirmPasswordChanged = viewModel::updateAuthConfirmPassword,
+                onSubmit = viewModel::submitAuth,
+                onContinueAsGuest = viewModel::continueAsGuest,
+            )
+        } else {
+            AiTranslateContent(
+                state = uiState,
+                onSectionSelected = viewModel::selectSection,
+                onSourceTextChanged = viewModel::updateSourceText,
+                onClearInput = viewModel::clearInput,
+                onOpenLanguagePicker = viewModel::openLanguagePicker,
+                onCloseLanguagePicker = viewModel::closeLanguagePicker,
+                onChooseLanguage = viewModel::chooseLanguage,
+                onSwapLanguages = viewModel::swapLanguages,
+                onTranslate = viewModel::translate,
+                onBaseUrlChanged = viewModel::updateBaseUrl,
+                onApiKeyChanged = viewModel::updateApiKey,
+                onProviderNameChanged = viewModel::updateProviderName,
+                onSelectCloudProvider = viewModel::selectCloudProvider,
+                onAddCloudProvider = viewModel::addCloudProvider,
+                onFetchCloudModels = viewModel::fetchCloudModels,
+                onOpenModelPicker = viewModel::openModelPicker,
+                onCloseModelPicker = viewModel::closeModelPicker,
+                onModelSearchChanged = viewModel::updateModelSearchQuery,
+                onModelToAddChanged = viewModel::updateModelToAdd,
+                onSelectCloudModel = viewModel::selectCloudModel,
+                onAddCustomModel = viewModel::addCustomModel,
+                onDefaultModeChanged = viewModel::updateDefaultMode,
+                onDownloadModel = viewModel::downloadModel,
+                onDeleteModel = viewModel::deleteModel,
+                onDeleteHistory = viewModel::deleteHistory,
+                onClearHistory = viewModel::clearHistory,
+                onOpenHistoryDetail = viewModel::openHistoryDetail,
+                onCloseHistoryDetail = viewModel::closeHistoryDetail,
+                onCloseMiniTranslator = viewModel::closeMiniTranslator,
+                onTranslateMini = viewModel::translateMini,
+                onConsumeMiniAutoTranslateRequest = viewModel::consumeMiniAutoTranslateRequest,
+                onOpenFullTranslateFromMini = viewModel::openFullTranslateFromMini,
+                onAcceptClipboardQuickTranslate = viewModel::acceptClipboardQuickTranslate,
+                onDismissClipboardQuickTranslate = viewModel::dismissClipboardQuickTranslate,
+                onCheckAppUpdate = viewModel::checkAppUpdate,
+                onDownloadAppUpdate = viewModel::downloadAppUpdate,
+                onConsumeAppUpdateInstallRequest = viewModel::consumeAppUpdateInstallRequest,
+                onOpenUnifiedModelPicker = viewModel::openUnifiedModelPicker,
+                onCloseUnifiedModelPicker = viewModel::closeUnifiedModelPicker,
+                onSelectUnifiedModel = viewModel::selectUnifiedModel,
+                onUpdateDefaultUnifiedModel = viewModel::updateDefaultUnifiedModel,
+                onRefreshMlKitLanguageModels = viewModel::refreshMlKitLanguageModels,
+                onDownloadMlKitLanguageModel = viewModel::downloadMlKitLanguageModel,
+                onDeleteMlKitLanguageModel = viewModel::deleteMlKitLanguageModel,
+                onOpenImageTranslator = viewModel::openImageTranslator,
+                onUpdateImageRecognizedText = viewModel::updateImageRecognizedText,
+                onTranslateImageText = viewModel::translateImageText,
+                onCloseImageTranslator = viewModel::closeImageTranslator,
+                onBringImageTranslationToHome = viewModel::bringImageTranslationToHome,
+                onDictionaryQueryChanged = viewModel::updateDictionaryQuery,
+                onLookupDictionary = viewModel::lookupDictionary,
+                onChooseDictionarySuggestion = viewModel::chooseDictionarySuggestion,
+                onLogout = viewModel::logout,
+            )
+        }
+    }
+}
+
+@Composable
+private fun AuthScreen(
+    state: TranslateUiState,
+    onModeSelected: (AuthMode) -> Unit,
+    onUsernameChanged: (String) -> Unit,
+    onPasswordChanged: (String) -> Unit,
+    onConfirmPasswordChanged: (String) -> Unit,
+    onSubmit: () -> Unit,
+    onContinueAsGuest: () -> Unit,
+) {
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background,
+    ) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(horizontal = 22.dp, vertical = 28.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp),
+        ) {
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Surface(
+                        modifier = Modifier.size(54.dp),
+                        shape = RoundedCornerShape(18.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.primary,
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(Icons.Default.Translate, contentDescription = null, modifier = Modifier.size(28.dp))
+                        }
+                    }
+                    Text(
+                        text = "AI 翻译",
+                        style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onBackground,
+                    )
+                    Text(
+                        text = "登录后可同步翻译历史，课程服务器使用 Cloudflare 托管。",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
+            item {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(22.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                    shadowElevation = 1.dp,
+                ) {
+                    Column(
+                        modifier = Modifier.padding(18.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp),
+                    ) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            FilterChip(
+                                selected = state.authMode == AuthMode.LOGIN,
+                                onClick = { onModeSelected(AuthMode.LOGIN) },
+                                label = { Text("登录") },
+                                enabled = !state.isAuthLoading,
+                            )
+                            FilterChip(
+                                selected = state.authMode == AuthMode.REGISTER,
+                                onClick = { onModeSelected(AuthMode.REGISTER) },
+                                label = { Text("注册") },
+                                enabled = !state.isAuthLoading,
+                            )
+                        }
+
+                        OutlinedTextField(
+                            value = state.authUsername,
+                            onValueChange = onUsernameChanged,
+                            enabled = !state.isAuthLoading,
+                            singleLine = true,
+                            label = { Text("账号") },
+                            leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
+                            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None),
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        OutlinedTextField(
+                            value = state.authPassword,
+                            onValueChange = onPasswordChanged,
+                            enabled = !state.isAuthLoading,
+                            singleLine = true,
+                            label = { Text("密码") },
+                            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
+                            visualTransformation = PasswordVisualTransformation(),
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        if (state.authMode == AuthMode.REGISTER) {
+                            OutlinedTextField(
+                                value = state.authConfirmPassword,
+                                onValueChange = onConfirmPasswordChanged,
+                                enabled = !state.isAuthLoading,
+                                singleLine = true,
+                                label = { Text("确认密码") },
+                                leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
+                                visualTransformation = PasswordVisualTransformation(),
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
+
+                        MessageBanner(
+                            error = state.authErrorMessage,
+                            info = state.authInfoMessage,
+                        )
+
+                        Button(
+                            onClick = onSubmit,
+                            enabled = !state.isAuthLoading,
+                            shape = RoundedCornerShape(14.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp),
+                        ) {
+                            if (state.isAuthLoading) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.onPrimary,
+                                )
+                                Spacer(Modifier.width(8.dp))
+                            }
+                            Text(if (state.authMode == AuthMode.LOGIN) "登录" else "注册并登录")
+                        }
+                        TextButton(
+                            onClick = onContinueAsGuest,
+                            enabled = !state.isAuthLoading,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text("先以游客模式使用")
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -278,6 +435,7 @@ private fun AiTranslateContent(
     onDictionaryQueryChanged: (String) -> Unit,
     onLookupDictionary: () -> Unit,
     onChooseDictionarySuggestion: (String) -> Unit,
+    onLogout: () -> Unit,
 ) {
     val clipboard = LocalClipboardManager.current
     val context = LocalContext.current
@@ -421,6 +579,7 @@ private fun AiTranslateContent(
                     onClearHistory = onClearHistory,
                     onCheckAppUpdate = onCheckAppUpdate,
                     onDownloadAppUpdate = onDownloadAppUpdate,
+                    onLogout = onLogout,
                     ttsState = ttsState,
                     onRefreshTts = speaker::refresh,
                     onInstallTtsData = {
@@ -3236,6 +3395,7 @@ private fun ModelScreen(
 }
 
 private enum class SettingsSubPage(val displayName: String) {
+    ACCOUNT("账号与同步"),
     MODEL_SERVICE("AI 模型服务"),
     OFFLINE_MODEL("离线模型管理"),
     LAUNCH_MODEL("启动默认模型"),
@@ -3266,6 +3426,7 @@ private fun SettingsScreen(
     onClearHistory: () -> Unit,
     onCheckAppUpdate: () -> Unit,
     onDownloadAppUpdate: () -> Unit,
+    onLogout: () -> Unit,
     ttsState: TtsRuntimeState,
     onRefreshTts: () -> Unit,
     onInstallTtsData: () -> Unit,
@@ -3331,6 +3492,7 @@ private fun SettingsScreen(
                 onClearHistory = onClearHistory,
                 onCheckAppUpdate = onCheckAppUpdate,
                 onDownloadAppUpdate = onDownloadAppUpdate,
+                onLogout = onLogout,
                 ttsState = ttsState,
                 onRefreshTts = onRefreshTts,
                 onInstallTtsData = onInstallTtsData,
@@ -3442,6 +3604,16 @@ private fun SettingsScreen(
                 // 分组三：系统与其它
                 item {
                     SettingsCategoryCard(title = "系统与其它") {
+                        SettingsNavigationRow(
+                            title = "账号与同步",
+                            subtitle = state.authSession?.let { "已登录：${it.user.username}" } ?: "游客模式，本机使用",
+                            icon = { Icon(Icons.Default.Person, contentDescription = null, tint = Color(0xFF5966E8)) },
+                            onClick = { activeSubPage = SettingsSubPage.ACCOUNT }
+                        )
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        )
                         SettingsNavigationRow(
                             title = "数据与历史",
                             subtitle = "管理本地历史与存储",
@@ -3730,6 +3902,7 @@ private fun SettingsSubPageLayout(
     onClearHistory: () -> Unit,
     onCheckAppUpdate: () -> Unit,
     onDownloadAppUpdate: () -> Unit,
+    onLogout: () -> Unit,
     ttsState: TtsRuntimeState,
     onRefreshTts: () -> Unit,
     onInstallTtsData: () -> Unit,
@@ -3786,6 +3959,14 @@ private fun SettingsSubPageLayout(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             when (subPage) {
+                SettingsSubPage.ACCOUNT -> {
+                    item {
+                        AccountSyncSection(
+                            state = state,
+                            onLogout = onLogout,
+                        )
+                    }
+                }
                 SettingsSubPage.MODEL_SERVICE -> {
                     item {
                         Surface(
@@ -4438,6 +4619,71 @@ private fun SettingsSubPageLayout(
                 onSelectCloudProvider = onSelectCloudProvider,
                 onAddCloudProvider = onAddCloudProvider,
             )
+        }
+    }
+}
+
+@Composable
+private fun AccountSyncSection(
+    state: TranslateUiState,
+    onLogout: () -> Unit,
+) {
+    val session = state.authSession
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        shadowElevation = 1.dp,
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Surface(
+                    modifier = Modifier.size(46.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.primary,
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(24.dp))
+                    }
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = session?.user?.username ?: "游客模式",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Text(
+                        text = if (session != null) "翻译历史会尝试同步到云端" else "当前仅保存在本机",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
+            SettingsStaticRow("后端服务", BuildConfig.AUTH_BASE_URL)
+            SettingsStaticRow("本地历史记录", "${state.histories.size} 条")
+            if (session != null) {
+                SettingsStaticRow("Token 到期时间", formatTime(session.expiresAt))
+            }
+
+            Button(
+                onClick = onLogout,
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(44.dp),
+            ) {
+                Text(if (session != null) "退出登录" else "返回登录")
+            }
         }
     }
 }
