@@ -10,9 +10,9 @@ android {
 
     val resolvedVersionCode = providers.gradleProperty("appVersionCode")
         .map(String::toInt)
-        .getOrElse(9)
+        .getOrElse(10)
     val resolvedVersionName = providers.gradleProperty("appVersionName")
-        .getOrElse("1.0.8")
+        .getOrElse("1.0.9")
     val resolvedAuthBaseUrl = providers.gradleProperty("authBaseUrl")
         .getOrElse("https://ai-translate-auth.jiezhi858.workers.dev")
 

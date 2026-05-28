@@ -14,6 +14,7 @@ import com.mxwis.aitranslate.data.settings.CloudProviderSettings
 import com.mxwis.aitranslate.data.translation.TranslationRepositoryContract
 import com.mxwis.aitranslate.data.update.AppUpdateCheckResult
 import com.mxwis.aitranslate.data.update.AppUpdateRelease
+import android.graphics.Bitmap
 import com.mxwis.aitranslate.domain.ModelType
 import com.mxwis.aitranslate.domain.OfflineModelType
 import com.mxwis.aitranslate.domain.TranslateOutput
@@ -57,6 +58,22 @@ class TranslateViewModelTest {
         assertEquals("hello", state.miniSourceText)
         assertTrue(state.shouldAutoTranslateMini)
         assertFalse(state.isClipboardSuggestionOpen)
+    }
+
+    @Test
+    fun `可跳过一次剪贴板快捷翻译提示`() = runTest {
+        val viewModel = TranslateViewModel(FakeTranslationRepository())
+
+        viewModel.skipNextClipboardQuickTranslateOffer()
+        viewModel.offerClipboardQuickTranslate("旧剪贴板")
+
+        assertFalse(viewModel.uiState.value.isClipboardSuggestionOpen)
+
+        viewModel.offerClipboardQuickTranslate("新剪贴板")
+
+        val state = viewModel.uiState.value
+        assertTrue(state.isClipboardSuggestionOpen)
+        assertEquals("新剪贴板", state.clipboardCandidateText)
     }
 
     @Test
@@ -220,6 +237,23 @@ class TranslateViewModelTest {
         assertFalse(state.isImageRecognizing)
         assertEquals("hello\n你好", state.imageRecognizedText)
         assertEquals("已识别图片文字，可编辑后翻译", state.imageInfoMessage)
+    }
+
+    @Test
+    fun `图片翻译打开时不会弹出剪贴板快捷翻译`() = runTest {
+        val viewModel = TranslateViewModel(
+            repository = FakeTranslationRepository(),
+            imageTextRecognizer = FakeImageTextRecognizer("hello"),
+        )
+
+        viewModel.openImageTranslator("content://test/image", "相册导入")
+        advanceUntilIdle()
+        viewModel.offerClipboardQuickTranslate("旧剪贴板")
+
+        val state = viewModel.uiState.value
+        assertTrue(state.isImageTranslatorOpen)
+        assertFalse(state.isClipboardSuggestionOpen)
+        assertEquals("", state.clipboardCandidateText)
     }
 
     @Test
@@ -426,6 +460,7 @@ private class FakeImageTextRecognizer(
     private val text: String,
 ) : ImageTextRecognizerContract {
     override suspend fun recognize(uriString: String): String = text
+    override suspend fun recognize(bitmap: Bitmap): String = text
 }
 
 private class FakeDictionaryRepository : DictionaryRepositoryContract {

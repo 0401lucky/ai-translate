@@ -1897,3 +1897,305 @@
 - 已扫描仓库，未发现 Resend API Key 形态的明文密钥。
 - 本次为纯 Worker 后端修复，未重新构建 APK，1.0.8 客户端无需更新即可生效。
 - 已完成 review、提交并推送 GitHub。
+
+## Task 048：完善 APP 开发课程设计论文
+
+### 目标
+
+以 `D:\code\app开发\app程序设计-唐国荣.docx` 为主文档，结合课程论文系统需求分析、系统设计评分标准和绘图要求，补写一份完整、可提交的 AI 翻译 App 课程设计论文。
+
+### 范围
+
+- 读取主文档和评分标准，提取必须包含的章节与图表要求。
+- 按当前项目实际功能补全需求分析、系统设计、实现说明、测试与总结。
+- 生成并插入必要图示：
+  - 功能模块划分图。
+  - 用例图。
+  - 核心业务流程图或活动图。
+  - 类图。
+  - ER 图。
+  - 系统架构图。
+- 保留主文档原有封面与基础格式，必要时修正标题、目录、图题和表题。
+- 渲染检查最终 Word 版式。
+
+### 不包含
+
+- 不虚构未实现的大型功能。
+- 不删除用户已有原始文件；写入前保留备份。
+- 不提交与文档无关的临时预览文件。
+
+### 完成标准
+
+- 主文档内容完整覆盖评分要求。
+- 图表与当前 AI 翻译 App 实际实现一致。
+- Word 渲染后无明显遮挡、溢出、断裂或图文错位。
+- 验证结果写回 TODO 与 Task 文档。
+
+### 验证记录
+
+- 已读取主文档、系统设计论文模板、系统设计评分标准、系统需求分析评分标准和绘图要点 PDF。
+- 已按当前项目实际补全 7 章内容：绪论、相关技术、系统需求分析、系统设计、系统实现、系统测试、总结与展望，并补充参考文献。
+- 已生成并插入 10 张图：功能模块划分图、总用例图、系统架构图、注册登录活动图、文本翻译活动图、图片 OCR 活动图、模型下载与更新活动图、接口时序图、核心类图、数据库 ER 图。
+- 已补充接口设计，覆盖 Cloudflare Worker 账号/历史/设置接口、OpenAI 兼容接口、Cloudflare R2 下载接口、ML Kit SDK 和 Android 系统能力。
+- 已补充数据库概念设计与物理设计，覆盖本地 Room `translation_history`、云端 D1 `users`、`email_verification_codes`、`translation_history`、`user_settings`。
+- 已写回主文档：`D:\code\app开发\app程序设计-唐国荣.docx`。
+- 已自动保留原文件备份：`D:\code\app开发\app程序设计-唐国荣_补全前备份_20260527_163125.docx`。
+- Documents 技能自带 `render_docx.py` 因本机缺少 LibreOffice/soffice 报 `FileNotFoundError`，未能生成其 PNG 渲染图。
+- 已使用 Microsoft Word 后台更新目录/页码并导出 PDF：`D:\code\app开发\app程序设计-唐国荣_预览.pdf`，共 18 页。
+- 已将 PDF 拆分为单页并用浏览器逐页截图检查，修正过一次注册登录活动图画布裁切问题；复查后未发现图表遮挡、文字溢出或明显分页错误。
+- 已关闭临时本地 PDF 预览服务。
+
+## Task 049：按学校封面和优秀论文格式修正文档排版
+
+### 目标
+
+根据用户反馈，修正 `D:\code\app开发\app程序设计-唐国荣.docx` 的版式问题：恢复原封面学校图片和封面排版，参考优秀毕业设计文档的字号、标题颜色、正文行距和图表风格，避免上一版蓝色标题和报告化排版。
+
+### 范围
+
+- 读取 `D:\code\app开发\封面_补全前备份_20260522.docx`，提取原封面图片和封面结构。
+- 读取优秀毕业设计参考文档，抽取正文、标题、图题和页面边距等格式特征。
+- 在保留已补全文字内容和图表内容的基础上，重建主文档样式。
+- 去掉不符合参考论文的蓝色标题样式。
+- 导出 PDF 预览并检查封面、目录、正文和图表页。
+
+### 不包含
+
+- 不改动 App 项目功能代码。
+- 不虚构学号等无法从上下文确定的信息。
+- 不删除用户提供的参考文档和原始备份。
+
+### 完成标准
+
+- 封面包含学校图片并接近原封面版式。
+- 正文黑色标题、字号、行距接近优秀毕业设计参考文档。
+- 图表不遮挡、不裁切，页面无明显错乱。
+- 验证结果写回 TODO 与 Task 文档。
+
+### 验证记录
+
+- 已抽取参考格式：原封面备份和优秀论文均为 A4 页面；正文 Normal 约 12pt、1.5 倍行距；一级标题约 15pt；二级标题约 14pt；图题 10pt；标题不使用蓝色商业风格。
+- 原封面备份包含 3 张图片，其中第一张为学校封面图，后两张为需求分析图。
+- 已重建主文档封面，恢复广东白云学院校徽校名图片、顶部横线、课程设计标题、题目横线和学生信息横线式填写区。
+- 已将正文样式调整为参考论文风格：Normal 12pt、1.5 倍行距；一级标题 15pt 黑色居中；二级标题 14pt 黑色；图题 10pt 黑色。
+- 已将图示重新生成为黑白灰论文风格，避免上一版蓝色报告感。
+- 已使用 Microsoft Word 后台更新目录/页码并导出 PDF：`D:\code\app开发\app程序设计-唐国荣_预览.pdf`，共 20 页。
+- 已用 `pypdf` 将 PDF 拆成单页并使用浏览器抽检封面、目录、正文、图表和参考文献页；页面可读取，未发现明显文字溢出、图示裁切或标题蓝色残留。
+- Documents 技能自带 `render_docx.py` 仍因本机缺少 LibreOffice/soffice 报 `FileNotFoundError`，因此最终视觉检查以 Word 导出的 PDF 为准。
+- 已关闭临时本地 PDF 预览服务。
+- 用户复查指出上一版封面仍误用了优秀毕业设计封面的字段，缺少课程设计模板中的第二行小组成员姓名/学号；本轮继续按课程设计原封面重新修正。
+- 已按用户复查反馈再次修正封面：顶部学校图和横线保留；字段恢复为两行“学生姓名 + 学号”和一行“专业班级”；移除误加的“指导教师”“企业导师”“二级学院”和封面日期。
+- 已将手写目录域改为由 Microsoft Word 生成的正式目录域，避免新生成文档在 Word 后台打开时卡住。
+- 已生成并验证 `D:\code\app开发\app程序设计-唐国荣_封面修正版.docx`：Word 可正常打开，页数为 20 页，目录数量为 1。
+- 已将修正版同步回主文档 `D:\code\app开发\app程序设计-唐国荣.docx`，并同步更新预览 PDF `D:\code\app开发\app程序设计-唐国荣_预览.pdf`。
+- 已通过浏览器查看 Word 导出的 PDF 预览，抽查封面、目录和核心图表页，未发现封面字段缺失、标题蓝色残留或图表明显遮挡。
+- 已复查封面“学号”填写线，调整成员行间距与空线长度，避免学号横线换行。
+- 用户继续反馈参考论文摘要页在“摘要”前有中文题目，并包含英文题目和英文摘要页；本轮补充中英文摘要前置结构。
+- 已补充中文摘要页结构：中文题目“基于 Android 的 AI 翻译 App 设计与实现”置于“摘  要”之前，摘要正文拆分为三段，并保留关键词。
+- 已新增英文摘要页：英文题目“DESIGN AND IMPLEMENTATION OF AI TRANSLATION APP BASED ON ANDROID”、`ABSTRACT`、英文摘要正文和 `Key words`。
+- 已重新生成主文档和预览 PDF，当前 `D:\code\app开发\app程序设计-唐国荣_预览.pdf` 共 21 页；第 2 页为中文摘要，第 3 页为英文摘要，第 4 页开始目录。
+- 已用 PDF 文本抽取和浏览器预览检查：封面不含误加字段，第二行小组成员存在，中文题目和英文摘要均已出现。
+- 用户继续反馈第四章活动图不符合绘图要点 PDF 中的 UML 活动图要求；本轮需要将线性流程框改为包含起点、终点、活动、判断、条件分支、回退路径和泳道职责划分的活动图。
+- 已根据绘图要点 PDF 重新绘制图 4-2 至图 4-5：注册登录、文本翻译、图片 OCR 翻译、模型下载与应用更新均改为 UML 活动图风格，包含初始节点、活动节点、判断菱形、条件标注、回退路径和终止节点。
+- 已将新活动图写回 `D:\code\app开发\app程序设计-唐国荣.docx`，并重新导出 `D:\code\app开发\app程序设计-唐国荣_预览.pdf`，当前共 22 页。
+- 已抽查 PDF 第 12 至 15 页，确认活动图图题正常、图形未裁切，正文分页正常。
+- 用户复查指出活动图中红色粗横线容易被理解为同步/终止语义，不适合作为普通汇合点；本轮将图 4-2、图 4-3、图 4-5 的粗横线替换为小菱形汇合节点，并保留活动图起点、判断分支、回退路径和终止节点。
+- 已同步回主文档并重新导出预览 PDF；修正目录占位符为 Word 目录域，当前 PDF 共 22 页，第 4 页为正式目录，第 12 至 15 页分别为图 4-2 至图 4-5。
+- 已额外修正图 4-3 中普通连线穿过“模型可用？”判断文字的问题；通过 PNG 原图检查、PDF 文本抽取和浏览器 PDF 预览抽查，未再发现粗横线或文字遮挡问题。
+
+## Task 050：应用图标与悬浮球重设计、剪贴板误触发修复
+
+### 目标
+
+重新设计当前过于粗糙的应用图标和悬浮球视觉，并修复从工具中的拍照翻译或图片翻译返回 App 后，自动弹出旧剪贴板快捷翻译的问题。
+
+### 范围
+
+- 使用 imagegen 生成应用图标和悬浮球设计稿，并保存到 `docs/ui/`。
+- 替换 Android adaptive launcher icon 前景与背景资源。
+- 将悬浮球从单字蓝色圆点改为更轻量的翻译图形按钮。
+- 限制应用内剪贴板快捷翻译触发条件：
+  - 只提示最近复制的文本。
+  - 图片翻译流程打开时不弹出剪贴板快捷翻译。
+  - 从系统相机或相册返回时避免把旧剪贴板内容当成当前操作。
+- 增加策略单元测试，覆盖图片翻译拦截和旧剪贴板忽略逻辑。
+
+### 不包含
+
+- 不改动悬浮窗权限申请流程。
+- 不改变悬浮球点击后的剪贴板桥接翻译能力。
+- 不发布新版 APK 到 R2。
+
+### 完成标准
+
+- 新设计稿已保存到 `docs/ui/`。
+- Debug APK 能成功构建。
+- 相关单元测试通过。
+- 应用图标和悬浮球视觉已替换。
+- 从拍照或相册返回 App 时，不再因为很久之前复制的文本自动弹出剪贴板快捷翻译。
+
+### 验证记录
+
+- 已使用 imagegen 生成应用图标设计稿：`docs/ui/app-icon-floating-redesign.png`。
+- 已使用 imagegen 生成悬浮球设计稿：`docs/ui/floating-bubble-redesign.png`。
+- 已替换 launcher adaptive icon 背景与前景，去掉旧版纯绿色背景和 `AI` 字形。
+- 已将悬浮球从蓝底单字 `译` 改为白底轻量圆形按钮，并使用双气泡翻译图形资源。
+- 已修复剪贴板快捷翻译触发条件：
+  - `MainActivity` 只接受最近 2 分钟内复制的剪贴板文本。
+  - 拍照/相册启动前跳过下一次剪贴板提示。
+  - 图片翻译面板打开时不再弹出剪贴板快捷翻译。
+- `.\gradlew.bat :app:testDebugUnitTest --tests "com.mxwis.aitranslate.domain.ClipboardQuickTranslatePolicyTest" --tests "com.mxwis.aitranslate.ui.TranslateViewModelTest" --no-daemon --max-workers=1 --console=plain`：通过。
+- `.\gradlew.bat :app:assembleDebug --no-daemon --max-workers=1 --console=plain`：通过。
+- `git diff --check`：通过，仅有 Windows 换行提示。
+- Debug APK 已生成：`app/build/outputs/apk/debug/app-debug.apk`，大小 `258323711` 字节。
+- 本机 SDK 内 `adb` 可启动，但当前无在线设备，真机拍照/相册返回链路待设备连接后补充点击验证。
+
+## Task 051：悬浮球截图框选翻译功能规划
+
+### 目标
+
+规划下一阶段悬浮球截图 / 框选翻译能力，让用户在不可复制文本、图片、PDF、聊天截图等跨 App 场景下，可以主动框选屏幕区域并完成 OCR 翻译。
+
+### 范围
+
+- 梳理 Android 屏幕捕获推荐路线和平台限制。
+- 明确截图框选翻译的用户流程、MVP 范围、技术方案、权限风险和完成标准。
+- 更新 `docs/悬浮窗划词翻译规划.md`。
+- 将“生词本 / 句子收藏与复习”放入后续功能池，暂不进入本轮实现。
+
+### 不包含
+
+- 本轮不实现 MediaProjection、框选层、OCR 调用或悬浮结果卡片代码。
+- 本轮不新增权限声明。
+- 本轮不生成 UI 设计稿；正式 UI 实现前再按项目规范使用 imagegen。
+
+### 完成标准
+
+- 后续规划文档包含截图框选翻译的完整实施路线。
+- 后续规划文档明确屏幕捕获权限、隐私提示和资源释放要求。
+- 生词本 / 句子收藏与复习已进入后续功能池。
+
+### 验证记录
+
+- 已参考 Android 官方文档确认 `MediaProjection` 需要通过 `createScreenCaptureIntent()` 获取用户授权。
+- 已确认 Android 14+ 目标下需要声明 `mediaProjection` 前台服务类型和 `FOREGROUND_SERVICE_MEDIA_PROJECTION` 权限。
+- 已确认 Android 14+ 不能复用同一个 `MediaProjection` 授权 token 创建多次虚拟显示，因此本规划采用“一次授权、一次截图、立即释放”的 MVP 方案。
+- 已更新 `docs/悬浮窗划词翻译规划.md`：
+  - 增加“悬浮球截图 / 框选翻译规划”。
+  - 增加 MVP、技术方案、权限风险、分阶段落地和完成标准。
+  - 将“生词本 / 句子收藏与复习”加入历史与数据后续功能池。
+- 本次仅修改规划文档，未运行 Android 构建。
+
+## Task 052：实现悬浮球截图框选翻译 MVP
+
+### 目标
+
+按 Task 051 的规划实现可用的悬浮球截图 / 框选翻译 MVP：用户在任意 App 中点击悬浮球，选择截图翻译，授权屏幕捕获后框选区域，App 自动 OCR 并在悬浮卡片中展示译文。
+
+### 范围
+
+- 更新 TODO 和任务文档，明确本轮完成标准。
+- 使用 imagegen 生成截图框选翻译 UI 设计图并保存到 `docs/ui/`。
+- 新增屏幕捕获授权 Activity，调用 `MediaProjectionManager.createScreenCaptureIntent()`。
+- 新增一次性截图捕获服务：
+  - 声明 `FOREGROUND_SERVICE` 和 `FOREGROUND_SERVICE_MEDIA_PROJECTION` 权限。
+  - 服务声明 `android:foregroundServiceType="mediaProjection"`。
+  - 获取一帧屏幕图像后立即释放 `MediaProjection`、`ImageReader` 和虚拟显示。
+- 扩展 OCR 能力，支持从 Bitmap 识别文字。
+- 改造悬浮球点击行为：
+  - 点击后展示小型悬浮菜单。
+  - 提供剪贴板翻译和截图翻译两个入口。
+- 新增框选层：
+  - 半透明遮罩。
+  - 拖拽选择区域。
+  - 提供确认、取消、重新框选。
+- 复用现有翻译仓库，识别文本后自动翻译。
+- 悬浮结果卡片展示识别文本、译文、复制、朗读、重新框选和关闭。
+- 增加必要单元测试或可测试纯逻辑测试。
+
+### 不包含
+
+- 不做后台连续录屏。
+- 不默认保存截图原图。
+- 不接入无障碍服务读取屏幕文本。
+- 不实现生词本 / 句子复习。
+- 不发布新版 APK 到 R2。
+
+### 完成标准
+
+- Debug APK 能成功构建。
+- 相关单元测试通过。
+- Manifest 权限和服务声明符合 Android 14+ MediaProjection 要求。
+- 悬浮球菜单能区分剪贴板翻译和截图翻译。
+- 用户取消授权、取消框选、框选区域过小、OCR 为空、翻译失败都有明确提示。
+- 捕获完成或失败后释放投屏资源，不保持后台录屏状态。
+
+### 验证记录
+
+- 已使用 imagegen 生成截图框选翻译 UI 设计图：`docs/ui/floating-screenshot-translate-design.png`。
+- 已新增 `ScreenCaptureBridgeActivity`，通过 `MediaProjectionManager.createScreenCaptureIntent()` 请求一次性屏幕捕获授权。
+- 已为 `FloatingTranslateService` 增加截图翻译入口：
+  - 悬浮球点击后展示“剪贴板 / 截图”菜单。
+  - 截图入口授权成功后显示全屏框选层。
+  - 用户确认框选后捕获一帧屏幕并立即释放 `MediaProjection`、`VirtualDisplay` 和 `ImageReader`。
+- 已更新 Manifest：
+  - 声明 `FOREGROUND_SERVICE`。
+  - 声明 `FOREGROUND_SERVICE_MEDIA_PROJECTION`。
+  - 为悬浮服务声明 `android:foregroundServiceType="mediaProjection"`。
+- 已扩展 `ImageTextRecognizerContract`，支持 `Bitmap` OCR 输入。
+- 已新增 `ScreenSelectionOverlayView`，支持半透明遮罩、拖拽框选、确认、取消和区域过小提示。
+- 已新增 `ScreenshotSelectionBoundsPolicy` 和单元测试，覆盖反向拖拽规范化、过小区域判定和屏幕坐标到截图坐标映射。
+- 已接入截图 OCR、翻译仓库和悬浮结果卡片，支持复制、朗读、重新框选和关闭。
+- `.\gradlew.bat :app:testDebugUnitTest --tests "com.mxwis.aitranslate.overlay.ScreenshotSelectionBoundsPolicyTest" --tests "com.mxwis.aitranslate.ui.TranslateViewModelTest" --no-daemon --max-workers=1 --console=plain`：通过。
+- `.\gradlew.bat :app:assembleDebug --no-daemon --max-workers=1 --console=plain`：通过。
+- `git diff --check`：通过，仅有 Windows 换行提示。
+- 本机 `adb devices` 当前无在线设备，暂未完成真机悬浮球授权、框选、OCR 和结果卡片点击验证。
+
+## Task 053：发布 1.0.9 图标悬浮截图翻译版本
+
+### 目标
+
+将应用图标重设计、悬浮球重设计、剪贴板误触发修复，以及悬浮球截图框选翻译 MVP 汇总为 `1.0.9 (10)` Debug 内置更新包，上传到 Cloudflare R2，并推送 GitHub。
+
+### 范围
+
+- 将 App 默认版本提升为 `versionCode = 10`、`versionName = 1.0.9`。
+- 更新 R2 Debug 发版脚本默认参数、APK 对象路径和更新说明。
+- 构建 1.0.9 Debug APK。
+- 上传 APK 与 `releases/latest.json` 到 R2 bucket `ai-translate-assets`。
+- 验证公开下载域名 `https://download.204152.xyz` 下的 APK 与更新清单可访问。
+- 提交并推送 GitHub。
+
+### 不包含
+
+- 不发布正式签名 Release 包。
+- 不发布新版 Worker 后端。
+- 不上传论文预览临时图片或无关脚本产物。
+
+### 完成标准
+
+- `app/build/outputs/apk/debug/output-metadata.json` 显示 `versionCode = 10`、`versionName = 1.0.9`。
+- R2 `releases/latest.json` 指向 `1.0.9 (10)`。
+- APK 公开 URL 返回 200。
+- 关键单元测试和 Debug 构建通过。
+- GitHub `main` 分支包含本次发布提交。
+
+### 验证记录
+
+- 已将 App 默认版本号提升为 `versionCode = 10`、`versionName = 1.0.9`。
+- 已更新 `scripts/publish-r2-debug-update.ps1` 默认参数：
+  - APK 对象路径：`releases/ai-translate-1.0.9-debug.apk`。
+  - 更新说明覆盖应用图标 / 悬浮球重设计、剪贴板误触发修复、悬浮球截图框选翻译。
+- `.\gradlew.bat :app:testDebugUnitTest --tests "com.mxwis.aitranslate.domain.ClipboardQuickTranslatePolicyTest" --tests "com.mxwis.aitranslate.overlay.ScreenshotSelectionBoundsPolicyTest" --tests "com.mxwis.aitranslate.ui.TranslateViewModelTest" --no-daemon --max-workers=1 --console=plain`：通过。
+- `.\gradlew.bat :app:assembleDebug --no-daemon --max-workers=1 --console=plain`：通过。
+- `app/build/outputs/apk/debug/output-metadata.json` 已确认 `versionCode = 10`、`versionName = 1.0.9`。
+- 已执行 `.\scripts\publish-r2-debug-update.ps1`，上传 1.0.9 Debug APK 与 `releases/latest.json` 到 R2。
+- R2 Debug APK：
+  - URL：`https://download.204152.xyz/releases/ai-translate-1.0.9-debug.apk`
+  - Size：`257519984`
+  - SHA256：`6B687D045774A8B336648C673817FFA71F5DE3572025D8BE95182D4A26C1F7FF`
+- 公开访问验证：
+  - `https://download.204152.xyz/releases/latest.json` 返回 200，内容为 `1.0.9 (10)`。
+  - `https://download.204152.xyz/releases/ai-translate-1.0.9-debug.apk` HEAD 返回 200，`Content-Length = 257519984`，`Content-Type = application/vnd.android.package-archive`。
+- `git diff --check`：通过，仅有 Windows 换行提示。
+- GitHub 推送记录待提交完成后补充。

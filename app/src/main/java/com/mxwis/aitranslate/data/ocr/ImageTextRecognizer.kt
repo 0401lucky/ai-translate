@@ -1,5 +1,6 @@
 package com.mxwis.aitranslate.data.ocr
 
+import android.graphics.Bitmap
 import android.content.Context
 import android.net.Uri
 import com.google.android.gms.tasks.Task
@@ -16,6 +17,7 @@ import kotlinx.coroutines.withContext
 
 interface ImageTextRecognizerContract {
     suspend fun recognize(uriString: String): String
+    suspend fun recognize(bitmap: Bitmap): String
 }
 
 class MlKitImageTextRecognizer(
@@ -28,9 +30,18 @@ class MlKitImageTextRecognizer(
     override suspend fun recognize(uriString: String): String = withContext(Dispatchers.IO) {
         val uri = Uri.parse(uriString)
         val image = InputImage.fromFilePath(appContext, uri)
+        recognizeImage(image)
+    }
+
+    override suspend fun recognize(bitmap: Bitmap): String = withContext(Dispatchers.IO) {
+        val image = InputImage.fromBitmap(bitmap, 0)
+        recognizeImage(image)
+    }
+
+    private suspend fun recognizeImage(image: InputImage): String {
         val chineseText = chineseRecognizer.process(image).await()
         val latinText = latinRecognizer.process(image).await()
-        mergeRecognizedText(chineseText, latinText).ifBlank {
+        return mergeRecognizedText(chineseText, latinText).ifBlank {
             error("未识别到文字，请换一张更清晰的图片")
         }
     }

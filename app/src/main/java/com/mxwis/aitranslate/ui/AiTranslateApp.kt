@@ -220,6 +220,7 @@ fun AiTranslateApp(viewModel: TranslateViewModel) {
                 onOpenFullTranslateFromMini = viewModel::openFullTranslateFromMini,
                 onAcceptClipboardQuickTranslate = viewModel::acceptClipboardQuickTranslate,
                 onDismissClipboardQuickTranslate = viewModel::dismissClipboardQuickTranslate,
+                onSkipNextClipboardQuickTranslate = viewModel::skipNextClipboardQuickTranslateOffer,
                 onCheckAppUpdate = viewModel::checkAppUpdate,
                 onDownloadAppUpdate = viewModel::downloadAppUpdate,
                 onConsumeAppUpdateInstallRequest = viewModel::consumeAppUpdateInstallRequest,
@@ -471,6 +472,7 @@ private fun AiTranslateContent(
     onOpenFullTranslateFromMini: () -> Unit,
     onAcceptClipboardQuickTranslate: () -> Unit,
     onDismissClipboardQuickTranslate: () -> Unit,
+    onSkipNextClipboardQuickTranslate: () -> Unit,
     onCheckAppUpdate: () -> Unit,
     onDownloadAppUpdate: () -> Unit,
     onConsumeAppUpdateInstallRequest: () -> Unit,
@@ -782,10 +784,12 @@ private fun AiTranslateContent(
         ) {
             TranslateToolboxSheet(
                 onTakePhoto = {
+                    onSkipNextClipboardQuickTranslate()
                     isToolSheetOpen = false
                     launchCamera()
                 },
                 onPickImage = {
+                    onSkipNextClipboardQuickTranslate()
                     isToolSheetOpen = false
                     launchGallery()
                 },

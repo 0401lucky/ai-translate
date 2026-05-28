@@ -129,6 +129,7 @@ class TranslateViewModel(
     private val _uiState = MutableStateFlow(TranslateUiState())
     val uiState: StateFlow<TranslateUiState> = _uiState.asStateFlow()
     private var lastClipboardPromptText: String? = null
+    private var skipNextClipboardOffer = false
 
     init {
         viewModelScope.launch {
@@ -491,6 +492,8 @@ class TranslateViewModel(
                     imageTranslatedText = "",
                     imageErrorMessage = "图片识别模块不可用",
                     imageInfoMessage = null,
+                    isClipboardSuggestionOpen = false,
+                    clipboardCandidateText = "",
                 )
             }
             return
@@ -507,6 +510,8 @@ class TranslateViewModel(
                 isImageTranslating = false,
                 imageErrorMessage = null,
                 imageInfoMessage = "正在识别图片文字",
+                isClipboardSuggestionOpen = false,
+                clipboardCandidateText = "",
             )
         }
 
@@ -988,6 +993,10 @@ class TranslateViewModel(
     fun offerClipboardQuickTranslate(text: String) {
         val normalized = ClipboardQuickTranslatePolicy.normalize(text)
         if (normalized.isBlank()) return
+        if (skipNextClipboardOffer) {
+            skipNextClipboardOffer = false
+            return
+        }
 
         _uiState.update { state ->
             if (
@@ -997,6 +1006,7 @@ class TranslateViewModel(
                     currentSourceText = state.sourceText,
                     isMiniTranslatorOpen = state.isMiniTranslatorOpen,
                     isClipboardSuggestionOpen = state.isClipboardSuggestionOpen,
+                    isImageTranslatorOpen = state.isImageTranslatorOpen,
                 )
             ) {
                     lastClipboardPromptText = normalized
@@ -1009,6 +1019,16 @@ class TranslateViewModel(
             } else {
                 state
             }
+        }
+    }
+
+    fun skipNextClipboardQuickTranslateOffer() {
+        skipNextClipboardOffer = true
+        _uiState.update {
+            it.copy(
+                isClipboardSuggestionOpen = false,
+                clipboardCandidateText = "",
+            )
         }
     }
 

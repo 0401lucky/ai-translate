@@ -9,6 +9,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.mxwis.aitranslate.domain.ClipboardQuickTranslatePolicy
 import com.mxwis.aitranslate.domain.ExternalTextInput
 import com.mxwis.aitranslate.ui.AiTranslateApp
 import com.mxwis.aitranslate.ui.TranslateViewModel
@@ -62,6 +63,15 @@ class MainActivity : ComponentActivity() {
     private fun offerClipboardText() {
         val clipboard = getSystemService(ClipboardManager::class.java) ?: return
         val description = clipboard.primaryClipDescription ?: return
+        if (
+            !ClipboardQuickTranslatePolicy.isFreshClipboard(
+                timestampMillis = description.timestamp,
+                nowMillis = System.currentTimeMillis(),
+                maxAgeMillis = CLIPBOARD_QUICK_TRANSLATE_MAX_AGE_MS,
+            )
+        ) {
+            return
+        }
         val isText = description.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN) ||
             description.hasMimeType(ClipDescription.MIMETYPE_TEXT_HTML)
         if (!isText) return
@@ -72,5 +82,9 @@ class MainActivity : ComponentActivity() {
         ) ?: return
 
         viewModel.offerClipboardQuickTranslate(text)
+    }
+
+    companion object {
+        private const val CLIPBOARD_QUICK_TRANSLATE_MAX_AGE_MS = 2 * 60 * 1000L
     }
 }

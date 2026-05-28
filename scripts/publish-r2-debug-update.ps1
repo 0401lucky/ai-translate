@@ -1,14 +1,14 @@
 param(
-    [int]$VersionCode = 9,
-    [string]$VersionName = "1.0.8",
+    [int]$VersionCode = 10,
+    [string]$VersionName = "1.0.9",
     [string]$AuthBaseUrl = "https://ai-translate-auth.jiezhi858.workers.dev",
     [string]$Bucket = "ai-translate-assets",
     [string]$PublicBaseUrl = "https://download.204152.xyz",
-    [string]$ApkObjectKey = "releases/ai-translate-1.0.8-debug.apk",
+    [string]$ApkObjectKey = "releases/ai-translate-1.0.9-debug.apk",
     [string[]]$Notes = @(
-        "注册流程新增邮箱验证码，验证码邮件通过 Resend 和 Cloudflare 子域名发送。",
-        "后端已强制校验邮箱验证码，提升课程项目账号注册安全性。",
-        "注册页新增邮箱、验证码输入和发送验证码按钮，登录与游客模式保持不变。"
+        "重新设计应用图标与悬浮球视觉，整体入口更清爽。",
+        "修复拍照或图片翻译返回后误触发旧剪贴板内容翻译的问题。",
+        "悬浮球新增截图框选翻译入口，授权后可框选屏幕区域并自动 OCR 翻译。"
     )
 )
 

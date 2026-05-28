@@ -48,4 +48,45 @@ class ClipboardQuickTranslatePolicyTest {
             ),
         )
     }
+
+    @Test
+    fun `图片翻译面板打开时不会弹出剪贴板提示`() {
+        assertFalse(
+            ClipboardQuickTranslatePolicy.shouldOffer(
+                normalizedText = "hello",
+                lastPromptText = null,
+                currentSourceText = "",
+                isMiniTranslatorOpen = false,
+                isClipboardSuggestionOpen = false,
+                isImageTranslatorOpen = true,
+            ),
+        )
+    }
+
+    @Test
+    fun `只接受最近复制的剪贴板文本`() {
+        val now = 1_000_000L
+
+        assertTrue(
+            ClipboardQuickTranslatePolicy.isFreshClipboard(
+                timestampMillis = now - 60_000L,
+                nowMillis = now,
+                maxAgeMillis = 120_000L,
+            ),
+        )
+        assertFalse(
+            ClipboardQuickTranslatePolicy.isFreshClipboard(
+                timestampMillis = now - 180_000L,
+                nowMillis = now,
+                maxAgeMillis = 120_000L,
+            ),
+        )
+        assertFalse(
+            ClipboardQuickTranslatePolicy.isFreshClipboard(
+                timestampMillis = now + 1_000L,
+                nowMillis = now,
+                maxAgeMillis = 120_000L,
+            ),
+        )
+    }
 }

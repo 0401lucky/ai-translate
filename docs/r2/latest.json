@@ -1,17 +1,17 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-05-26T21:41:02+08:00",
+  "updatedAt": "2026-05-28T08:27:36+08:00",
   "android": {
-    "versionCode": 9,
-    "versionName": "1.0.8",
+    "versionCode": 10,
+    "versionName": "1.0.9",
     "required": false,
-    "apkUrl": "https://download.204152.xyz/releases/ai-translate-1.0.8-debug.apk",
-    "sha256": "6D4E68F8A65931EA435F3E6AF6B0D533E1F8BE210E983E18CE98F3800A5BB804",
-    "sizeBytes": 257501735,
+    "apkUrl": "https://download.204152.xyz/releases/ai-translate-1.0.9-debug.apk",
+    "sha256": "6B687D045774A8B336648C673817FFA71F5DE3572025D8BE95182D4A26C1F7FF",
+    "sizeBytes": 257519984,
     "notes": [
-      "注册流程新增邮箱验证码，验证码邮件通过 Resend 和 Cloudflare 子域名发送。",
-      "后端已强制校验邮箱验证码，提升课程项目账号注册安全性。",
-      "注册页新增邮箱、验证码输入和发送验证码按钮，登录与游客模式保持不变。"
+      "重新设计应用图标与悬浮球视觉，整体入口更清爽。",
+      "修复拍照或图片翻译返回后误触发旧剪贴板内容翻译的问题。",
+      "悬浮球新增截图框选翻译入口，授权后可框选屏幕区域并自动 OCR 翻译。"
     ]
   }
 }
