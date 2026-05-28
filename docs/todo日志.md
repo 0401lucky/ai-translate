@@ -703,3 +703,37 @@
 - [x] 验证 R2 APK 与 `latest.json` 公开可访问。
 - [x] 提交并推送 GitHub。
 - [x] 回写构建与 R2 验证结果到 Task 文档和 TODO 日志。
+
+## 2026-05-28：重新生成桌面图标与悬浮球视觉稿
+
+- [x] 明确完成标准：桌面图标和悬浮球图标都要更精致，保存到 `docs/ui/`，便于继续交给其他 AI 落地。
+- [x] 更新 `docs/task文档.md`，新增 Task 057。
+- [x] 使用 imagegen 生成新版桌面图标视觉稿：`docs/ui/app-icon-premium-20260528.png`。
+- [x] 使用 imagegen 生成新版悬浮球图标视觉稿：`docs/ui/floating-bubble-premium-20260528.png`。
+- [x] 保存图片到 `docs/ui/`。
+- [x] 生成小尺寸可读性预览：`docs/ui/icon-premium-small-size-preview-20260528.png`。
+- [x] 回写生成结果到 Task 文档和 TODO 日志。
+
+## 2026-05-28：实装 Premium 桌面图标与 3D 水晶悬浮球
+
+- [x] 明确完成标准：桌面图标与悬浮球 premium 视觉效果实装，Python 自动剪裁与安全区前景生成完毕，Android 自适应配置及悬浮服务零线框阴影重构完成，编译与构建通过。
+- [x] 安装 Pillow 图片处理依赖。
+- [x] 编写并执行 `scripts/process-floating-bubble.py`，输出完美抠图的 3D 水晶球与 70% 居中透明背景的桌面图标前景。
+- [x] 修改 `app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml` 与 `ic_launcher_round.xml`，引入新前景 PNG 并设置背景为纯黑色以呈现高端微光桌面视差。
+- [x] 重构 `FloatingTranslateService.kt` 悬浮球渲染：将背景剥离，改用纯透明的圆形 Outline 背景以同时保留 Elevation 影子和 3D 圆形水晶的精致感。
+- [x] 运行编译与单元测试：`.\gradlew.bat :app:compileDebugKotlin`、`.\gradlew.bat testDebugUnitTest`。
+- [x] 构建 Debug APK：`.\gradlew.bat :app:assembleDebug`。
+- [x] 确认无任何编译警告或崩溃，回写验证结果。
+
+## 2026-05-28：发布 1.1.1 Premium 图标内置更新版本
+
+- [x] 明确完成标准：版本号提升为 `1.1.1 (12)`，Debug APK 构建成功，R2 `latest.json` 指向新版，公开 URL 可访问，并推送 GitHub。
+- [x] 更新 `docs/task文档.md`，新增 Task 059。
+- [x] 将 App 默认版本号提升为 `1.1.1 (12)`。
+- [x] 更新 R2 Debug 发版脚本默认参数和更新说明。
+- [x] 将图标处理脚本改为仓库相对路径，并用 `py -3.12` 复跑成功。
+- [x] 运行关键单元测试与 Debug 构建。
+- [x] 上传 1.1.1 Debug APK 到 R2 内置更新。
+- [x] 验证 R2 APK 与 `latest.json` 公开可访问。
+- [x] 提交并推送 GitHub。
+- [x] 回写构建与 R2 验证结果到 Task 文档和 TODO 日志。

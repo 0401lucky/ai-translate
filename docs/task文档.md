@@ -2339,3 +2339,131 @@
   - `https://download.204152.xyz/releases/latest.json` 返回 200，内容为 `1.1.0 (11)`。
   - `https://download.204152.xyz/releases/ai-translate-1.1.0-debug.apk` HEAD 返回 200，`Content-Length = 257519408`，`Content-Type = application/vnd.android.package-archive`。
 - 本轮发版变更随提交推送到 GitHub `main`。
+
+## Task 057：重新生成桌面图标与悬浮球视觉稿
+
+### 目标
+
+基于当前 AI 翻译 App 的产品气质，重新设计一版更精致、更适合交给后续 AI 继续落地的桌面图标和悬浮球图标视觉稿。
+
+### 范围
+
+- 参考现有应用能力、主题色、旧图标和悬浮球设计稿。
+- 使用 imagegen 生成新的桌面图标视觉稿。
+- 使用 imagegen 生成新的悬浮球图标视觉稿。
+- 将最终图片保存到 `docs/ui/`。
+
+### 不包含
+
+- 不替换 Android 启动图标资源。
+- 不修改 Compose 或悬浮窗实现代码。
+- 不构建新版 APK。
+
+### 完成标准
+
+- 桌面图标主体在小尺寸下清晰，能表达 AI 翻译、对话和双语转换。
+- 悬浮球图标结构简洁，适合 58dp 左右显示，不依赖细碎文字。
+- 两张图片保存到 `docs/ui/`，文件名清晰可追溯。
+- 记录生成提示词和验证结果。
+
+### 验证记录
+
+- 已使用 imagegen 生成新版桌面图标视觉稿：`docs/ui/app-icon-premium-20260528.png`。
+- 已使用 imagegen 生成新版悬浮球图标视觉稿：`docs/ui/floating-bubble-premium-20260528.png`。
+- 已生成小尺寸可读性预览：`docs/ui/icon-premium-small-size-preview-20260528.png`。
+- 桌面图标方向：
+  - 深青蓝启动器底板。
+  - 大号玻璃质感对话气泡。
+  - 白色文档卡片与青 / 珊瑚双色翻译箭头。
+  - 保留小 AI 星芒，避免文字和复杂小元素。
+- 悬浮球方向：
+  - 透明玻璃圆球。
+  - 青色对话气泡 + 珊瑚色单向箭头。
+  - 轻量星芒点缀，整体更适合悬浮层使用。
+- 本轮仅生成视觉稿和预览图，未修改 Android 资源，未运行 APK 构建。
+
+## Task 058：实装 Premium 桌面图标与 3D 水晶悬浮球
+
+### 目标
+
+将上一阶段设计的磨砂玻璃应用图标和 3D 水晶悬浮球实装到 App 中，彻底解决当前图标不美观的问题，提供高端的桌面视差动效和无缝悬浮质感。
+
+### 范围
+
+- 使用 Python Pillow 库处理高清图稿，生成透明背景的水晶球悬浮图标与自适应桌面前景。
+- 将处理后的图片保存到 `drawable-nodpi/` 目录中以确保原高清质量。
+- 修改 Android 桌面自适应图标配置，将前景指向新前景图，背景设为纯黑，完美贴合图标暗色边缘。
+- 修改悬浮服务逻辑，剥离白绿圆圈线框背景，改为纯透明圆形 Outline 背景，保持系统 Elevation 影子。
+- 进行本地编译、单元测试和打包构建验证。
+
+### 不包含
+
+- 不改动翻译核心功能逻辑。
+- 不添加新的非必要权限。
+- 不在此任务中发布新包到 R2。
+
+### 完成标准
+
+- 桌面图标支持自适应视差，元素在 safe zone 内部，不被系统裁剪。
+- 悬浮球呈现为无边框的完美圆形 3D 水晶玻璃球，并带有正确的系统圆形投影阴影。
+- Android 项目编译与单元测试成功通过，Debug APK 成功生成。
+
+### 验证记录
+
+- [x] Pillow 图片处理库安装：成功。
+- [x] 图像处理脚本运行：脚本 `scripts/process-floating-bubble.py` 执行成功。
+- [x] 水晶球抠图验证：圆形羽化边缘无杂色毛刺，缩放至 256x256，包体积精简（约 34KB）。
+- [x] 自适应桌面图标前景验证：70% 安全区缩放后居中贴于 1080x1080 透明画布，输出正常。
+- [x] `.\gradlew.bat :app:compileDebugKotlin --no-daemon --max-workers=1 --console=plain`：通过。
+- [x] `.\gradlew.bat testDebugUnitTest --no-daemon --max-workers=1 --console=plain`：通过。
+- [x] `.\gradlew.bat :app:assembleDebug --no-daemon --max-workers=1 --console=plain`：通过。
+
+## Task 059：发布 1.1.1 Premium 图标内置更新版本
+
+### 目标
+
+将 Gemini 已完成的 Premium 桌面图标和 3D 水晶悬浮球实装结果发布为 `1.1.1 (12)` Debug 内置更新包，并推送到 GitHub `main`。
+
+### 范围
+
+- 将 App 默认版本提升为 `versionCode = 12`、`versionName = 1.1.1`。
+- 更新 R2 Debug 发版脚本默认参数、APK 对象路径和更新说明。
+- 构建 1.1.1 Debug APK。
+- 上传 APK 与 `releases/latest.json` 到 R2 bucket `ai-translate-assets`。
+- 验证公开下载域名 `https://download.204152.xyz` 下的 APK 与更新清单可访问。
+- 提交并推送 GitHub。
+
+### 不包含
+
+- 不发布正式签名 Release 包。
+- 不修改翻译、截图或更新检查业务逻辑。
+- 不清理历史论文预览临时文件。
+
+### 完成标准
+
+- `app/build/outputs/apk/debug/output-metadata.json` 显示 `versionCode = 12`、`versionName = 1.1.1`。
+- R2 `releases/latest.json` 指向 `1.1.1 (12)`。
+- APK 公开 URL 返回 200。
+- 关键单元测试和 Debug 构建通过。
+- GitHub `main` 分支包含本次发布提交。
+
+### 验证记录
+
+- 已将 App 默认版本号提升为 `versionCode = 12`、`versionName = 1.1.1`。
+- 已更新 `scripts/publish-r2-debug-update.ps1` 默认参数：
+  - APK 对象路径：`releases/ai-translate-1.1.1-debug.apk`。
+  - 更新说明覆盖 Premium 桌面图标、3D 水晶悬浮球和图标资源处理脚本。
+- 已将 `scripts/process-floating-bubble.py` 改为按仓库目录自动定位资源，避免写死本机绝对路径。
+- `py -3.12 .\scripts\process-floating-bubble.py`：通过。
+- `.\gradlew.bat :app:testDebugUnitTest --tests "com.mxwis.aitranslate.domain.ClipboardQuickTranslatePolicyTest" --tests "com.mxwis.aitranslate.overlay.ScreenshotSelectionBoundsPolicyTest" --tests "com.mxwis.aitranslate.ui.TranslateViewModelTest" --no-daemon --max-workers=1 --console=plain`：通过。
+- `.\gradlew.bat :app:testDebugUnitTest --no-daemon --max-workers=1 --console=plain`：60 秒限制内未跑完，已改用本次相关关键测试组合验证。
+- `.\scripts\publish-r2-debug-update.ps1`：构建 1.1.1 Debug APK 成功；首次 R2 APK 上传遇到临时网络 `fetch failed`，随后手动重试上传成功。
+- `app/build/outputs/apk/debug/output-metadata.json` 已确认 `versionCode = 12`、`versionName = 1.1.1`。
+- R2 Debug APK：
+  - URL：`https://download.204152.xyz/releases/ai-translate-1.1.1-debug.apk`
+  - Size：`258311796`
+  - SHA256：`CEB0789F91FD4DC057925CEDA4184C73E794294E221C19F3C995E66FF6D31010`
+- 公开访问验证：
+  - `https://download.204152.xyz/releases/latest.json` 返回 200，内容为 `1.1.1 (12)`。
+  - `https://download.204152.xyz/releases/ai-translate-1.1.1-debug.apk` HEAD 返回 200，`Content-Length = 258311796`，`Content-Type = application/vnd.android.package-archive`。
+- 本轮发版变更随提交推送到 GitHub `main`。

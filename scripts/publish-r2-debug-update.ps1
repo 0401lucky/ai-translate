@@ -1,14 +1,14 @@
 param(
-    [int]$VersionCode = 11,
-    [string]$VersionName = "1.1.0",
+    [int]$VersionCode = 12,
+    [string]$VersionName = "1.1.1",
     [string]$AuthBaseUrl = "https://ai-translate-auth.jiezhi858.workers.dev",
     [string]$Bucket = "ai-translate-assets",
     [string]$PublicBaseUrl = "https://download.204152.xyz",
-    [string]$ApkObjectKey = "releases/ai-translate-1.1.0-debug.apk",
+    [string]$ApkObjectKey = "releases/ai-translate-1.1.1-debug.apk",
     [string[]]$Notes = @(
-        "重画应用图标与悬浮球，修复小尺寸下模糊、拥挤的问题。",
-        "修复悬浮球截图翻译在 Android 新版本上无法截屏的问题。",
-        "截图失败提示改为中文，并加强一次性截屏资源释放。"
+        "实装 Premium 桌面图标，使用高清前景资源提升启动器显示质感。",
+        "实装 3D 水晶悬浮球，去除旧线框背景，悬浮层更轻盈清晰。",
+        "优化图标资源处理脚本，便于后续继续生成和维护图标资产。"
     )
 )
 

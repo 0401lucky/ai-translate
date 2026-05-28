@@ -126,7 +126,7 @@ class FloatingTranslateService : Service() {
         }
         bubble.addView(
             ImageView(this).apply {
-                setImageResource(R.drawable.ic_floating_translate_mark)
+                setImageResource(R.drawable.ic_floating_bubble_premium)
                 scaleType = ImageView.ScaleType.FIT_CENTER
             },
             FrameLayout.LayoutParams(dp(48), dp(48), Gravity.CENTER),
@@ -950,12 +950,9 @@ class FloatingTranslateService : Service() {
     }
 
     private fun floatingBubbleBackground(): GradientDrawable {
-        return GradientDrawable(
-            GradientDrawable.Orientation.TL_BR,
-            intArrayOf(Color.WHITE, 0xFFF1FFFC.toInt()),
-        ).apply {
+        return GradientDrawable().apply {
             shape = GradientDrawable.OVAL
-            setStroke(dp(1), 0x6621B8AD)
+            setColor(Color.TRANSPARENT)
         }
     }
 
