@@ -671,3 +671,35 @@
 - [x] 验证 R2 APK 与 `latest.json` 公开可访问。
 - [x] 提交并推送 GitHub：`e0604e5`。
 - [x] 回写构建与 R2 验证结果到 Task 文档和 TODO 日志。
+
+## 2026-05-28：修正 1.0.9 图标和悬浮球实装视觉
+
+- [x] 明确完成标准：桌面图标和悬浮球在小尺寸下清晰、不糊、不拥挤，实装效果不再偏离设计图。
+- [x] 更新 `docs/task文档.md`，新增 Task 054。
+- [x] 使用 imagegen 生成修正版视觉方向图并保存到 `docs/ui/icon-floating-visual-fix-direction.png`。
+- [x] 重画 launcher icon 前景和背景，避免多元素堆叠。
+- [x] 重画悬浮球内部图形，提升 58dp 实际显示下的可读性。
+- [x] 生成本地预览图，对比桌面图标和悬浮球实际尺寸效果：`docs/ui/icon-floating-implementation-preview.png`。
+- [x] 运行构建验证。
+- [x] 回写验证结果到 Task 文档和 TODO 日志。
+
+## 2026-05-28：修复悬浮球截图翻译无法截屏
+
+- [x] 明确完成标准：截图翻译在创建屏幕捕获前注册 `MediaProjection.Callback`，不再出现 `Must register a callback before starting capture`。
+- [x] 更新 `docs/task文档.md`，新增 Task 055。
+- [x] 定位截图失败链路，确认是 MediaProjection 回调注册顺序问题。
+- [x] 调整一次性截屏资源释放逻辑，确保成功、失败、取消时都能关闭 `VirtualDisplay` 和 `ImageReader`。
+- [x] 运行构建验证。
+- [x] 回写验证结果到 Task 文档和 TODO 日志。
+
+## 2026-05-28：发布 1.1.0 图标悬浮球与截图翻译修复版本
+
+- [x] 明确完成标准：版本号提升为 `1.1.0 (11)`，Debug APK 构建成功，R2 `latest.json` 指向新版，公开 URL 可访问，并推送 GitHub。
+- [x] 更新 `docs/task文档.md`，新增 Task 056。
+- [x] 将 App 默认版本号提升为 `1.1.0 (11)`。
+- [x] 更新 R2 Debug 发版脚本默认参数和更新说明。
+- [x] 运行单元测试与 Debug 构建。
+- [x] 上传 1.1.0 Debug APK 到 R2 内置更新。
+- [x] 验证 R2 APK 与 `latest.json` 公开可访问。
+- [x] 提交并推送 GitHub。
+- [x] 回写构建与 R2 验证结果到 Task 文档和 TODO 日志。

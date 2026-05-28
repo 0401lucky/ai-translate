@@ -2199,3 +2199,143 @@
   - `https://download.204152.xyz/releases/ai-translate-1.0.9-debug.apk` HEAD 返回 200，`Content-Length = 257519984`，`Content-Type = application/vnd.android.package-archive`。
 - `git diff --check`：通过，仅有 Windows 换行提示。
 - 已提交并推送 GitHub `main`：`e0604e5 Release 1.0.9 screenshot translate update`。
+
+## Task 054：修正 1.0.9 图标和悬浮球实装视觉
+
+### 目标
+
+修复 1.0.9 桌面图标和悬浮球实装效果过于拥挤、模糊、与设计图落差大的问题。以用户截图中的真实桌面显示为准，重画小尺寸优先的图标资源。
+
+### 范围
+
+- 使用 imagegen 生成修正版视觉方向图，保存到 `docs/ui/`。
+- 重画 launcher adaptive icon 背景和前景：
+  - 减少元素数量。
+  - 放大主体轮廓。
+  - 避免箭头、闪光、多气泡互相遮挡。
+- 重画悬浮球内部图形：
+  - 适配 58dp 白色圆形外壳。
+  - 保持单一清晰符号，不再把复杂图标缩进悬浮球。
+- 生成本地预览图，检查桌面图标和悬浮球在小尺寸下是否清晰。
+- 运行 Debug 构建验证资源可编译。
+
+### 不包含
+
+- 不改截图翻译业务逻辑。
+- 不改 R2 内置更新，除非确认视觉资源修正通过后再发布补丁包。
+- 不清理论文预览临时图片。
+
+### 完成标准
+
+- 桌面图标在普通启动器尺寸下主体清晰，气泡不糊成一团。
+- 悬浮球在 58dp 下符号居中、大小合理、不会显得廉价或拥挤。
+- 本地预览图保存到 `docs/ui/`。
+- Debug APK 构建通过。
+
+### 验证记录
+
+- 已使用 imagegen 生成修正版视觉方向图：`docs/ui/icon-floating-visual-fix-direction.png`。
+- 已重画 launcher icon：
+  - 背景改为青绿色主色、低对比深色底部斜面和小珊瑚角。
+  - 前景改为一个大白色气泡、两条青绿色文字横线和一个珊瑚色箭头角标。
+  - 删除原先多个气泡、双箭头、闪光等小尺寸下会糊成一团的元素。
+- 已重画悬浮球内部图形：
+  - 图形从 `36dp` 放大到 `44dp` 资源。
+  - 悬浮球内 `ImageView` 从 `40dp` 放大到 `48dp`，外层 padding 从 `8dp` 降到 `5dp`。
+  - 删除小圆点和双箭头，改为一个大青色气泡和一个珊瑚色单向箭头。
+- 已生成小尺寸实装预览图：`docs/ui/icon-floating-implementation-preview.png`。
+- `.\gradlew.bat :app:mergeDebugResources --no-daemon --max-workers=1 --console=plain`：通过。
+- `.\gradlew.bat :app:assembleDebug --no-daemon --max-workers=1 --console=plain`：通过。
+- `git diff --check`：通过，仅有 Windows 换行提示。
+- 本地 Debug APK 已生成：`app/build/outputs/apk/debug/app-debug.apk`，仍为 `1.0.9 (10)`。
+
+## Task 055：修复悬浮球截图翻译无法截屏
+
+### 目标
+
+修复用户在悬浮球中点击“截图翻译”后，框选确认时出现 `Must register a callback before starting capture, to manage resources in response to MediaProjection states.` 的问题，让一次性截图捕获能在 Android 新版本上正常启动。
+
+### 范围
+
+- 定位 `MediaProjection` 截图链路失败原因。
+- 在创建 `VirtualDisplay` 前注册 `MediaProjection.Callback`。
+- 在成功、失败、取消和系统停止投屏时统一释放 `VirtualDisplay`、`ImageReader` 和回调。
+- 保留一次性截屏策略，不做后台连续录屏。
+- 运行 Debug 构建验证。
+
+### 不包含
+
+- 不改 OCR 翻译算法。
+- 不改框选层交互样式。
+- 不发布新版 APK 到 R2，除非后续确认发补丁包。
+
+### 完成标准
+
+- 创建屏幕捕获前已注册 `MediaProjection.Callback`。
+- 截图失败时不会再暴露系统英文异常给用户。
+- 捕获成功、失败、取消时都能释放截图资源。
+- Debug APK 构建通过。
+
+### 验证记录
+
+- 已定位失败原因：创建 `VirtualDisplay` 前没有注册 `MediaProjection.Callback`，Android 新版本会拒绝启动屏幕捕获。
+- 已在 `captureOneFrame` 中先注册 `MediaProjection.Callback`，再创建截图虚拟屏幕。
+- 已收紧一次性截图资源释放：
+  - 成功、失败、取消时释放 `VirtualDisplay`。
+  - 关闭 `ImageReader`。
+  - 注销 `MediaProjection.Callback`。
+  - 系统停止投屏时回调失败并清理。
+- 已将截图失败提示转为中文文案，避免把系统英文异常直接展示给用户。
+- `.\gradlew.bat :app:compileDebugKotlin --no-daemon --max-workers=1 --console=plain`：通过。
+- `.\gradlew.bat :app:assembleDebug --no-daemon --max-workers=1 --console=plain`：通过。
+- `git diff --check`：通过，仅有 Windows 换行提示。
+- 已通过本地 SDK 路径执行 `adb devices`，当前无在线设备，暂未完成真机截图链路点击验证。
+
+## Task 056：发布 1.1.0 图标悬浮球与截图翻译修复版本
+
+### 目标
+
+将小尺寸图标 / 悬浮球视觉修复，以及悬浮球截图翻译无法截屏修复，汇总为 `1.1.0 (11)` Debug 内置更新包，上传到 Cloudflare R2，并推送 GitHub。
+
+### 范围
+
+- 将 App 默认版本提升为 `versionCode = 11`、`versionName = 1.1.0`。
+- 更新 R2 Debug 发版脚本默认参数、APK 对象路径和更新说明。
+- 构建 1.1.0 Debug APK。
+- 上传 APK 与 `releases/latest.json` 到 R2 bucket `ai-translate-assets`。
+- 验证公开下载域名 `https://download.204152.xyz` 下的 APK 与更新清单可访问。
+- 提交并推送 GitHub。
+
+### 不包含
+
+- 不发布正式签名 Release 包。
+- 不发布新版 Worker 后端。
+- 不上传论文预览临时图片或无关脚本产物。
+
+### 完成标准
+
+- `app/build/outputs/apk/debug/output-metadata.json` 显示 `versionCode = 11`、`versionName = 1.1.0`。
+- R2 `releases/latest.json` 指向 `1.1.0 (11)`。
+- APK 公开 URL 返回 200。
+- 关键单元测试和 Debug 构建通过。
+- GitHub `main` 分支包含本次发布提交。
+
+### 验证记录
+
+- 已将 App 默认版本号提升为 `versionCode = 11`、`versionName = 1.1.0`。
+- 已更新 `scripts/publish-r2-debug-update.ps1` 默认参数：
+  - APK 对象路径：`releases/ai-translate-1.1.0-debug.apk`。
+  - 更新说明覆盖图标 / 悬浮球小尺寸修复、截图翻译截屏失败修复、中文失败提示和资源释放优化。
+- `wrangler --version`：`4.90.0`。
+- `.\gradlew.bat :app:testDebugUnitTest --tests "com.mxwis.aitranslate.domain.ClipboardQuickTranslatePolicyTest" --tests "com.mxwis.aitranslate.overlay.ScreenshotSelectionBoundsPolicyTest" --tests "com.mxwis.aitranslate.ui.TranslateViewModelTest" --no-daemon --max-workers=1 --console=plain`：通过。
+- `.\gradlew.bat :app:assembleDebug --no-daemon --max-workers=1 --console=plain`：通过。
+- `app/build/outputs/apk/debug/output-metadata.json` 已确认 `versionCode = 11`、`versionName = 1.1.0`。
+- 已执行 `.\scripts\publish-r2-debug-update.ps1`，上传 1.1.0 Debug APK 与 `releases/latest.json` 到 R2。
+- R2 Debug APK：
+  - URL：`https://download.204152.xyz/releases/ai-translate-1.1.0-debug.apk`
+  - Size：`257519408`
+  - SHA256：`EA0EB14A48243B7382A91486A16A114BF7C50BE927A250DBF509C04A41EE09AF`
+- 公开访问验证：
+  - `https://download.204152.xyz/releases/latest.json` 返回 200，内容为 `1.1.0 (11)`。
+  - `https://download.204152.xyz/releases/ai-translate-1.1.0-debug.apk` HEAD 返回 200，`Content-Length = 257519408`，`Content-Type = application/vnd.android.package-archive`。
+- 本轮发版变更随提交推送到 GitHub `main`。

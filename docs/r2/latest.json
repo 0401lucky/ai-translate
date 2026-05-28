@@ -1,17 +1,17 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-05-28T08:27:36+08:00",
+  "updatedAt": "2026-05-28T09:22:13+08:00",
   "android": {
-    "versionCode": 10,
-    "versionName": "1.0.9",
+    "versionCode": 11,
+    "versionName": "1.1.0",
     "required": false,
-    "apkUrl": "https://download.204152.xyz/releases/ai-translate-1.0.9-debug.apk",
-    "sha256": "6B687D045774A8B336648C673817FFA71F5DE3572025D8BE95182D4A26C1F7FF",
-    "sizeBytes": 257519984,
+    "apkUrl": "https://download.204152.xyz/releases/ai-translate-1.1.0-debug.apk",
+    "sha256": "EA0EB14A48243B7382A91486A16A114BF7C50BE927A250DBF509C04A41EE09AF",
+    "sizeBytes": 257519408,
     "notes": [
-      "重新设计应用图标与悬浮球视觉，整体入口更清爽。",
-      "修复拍照或图片翻译返回后误触发旧剪贴板内容翻译的问题。",
-      "悬浮球新增截图框选翻译入口，授权后可框选屏幕区域并自动 OCR 翻译。"
+      "重画应用图标与悬浮球，修复小尺寸下模糊、拥挤的问题。",
+      "修复悬浮球截图翻译在 Android 新版本上无法截屏的问题。",
+      "截图失败提示改为中文，并加强一次性截屏资源释放。"
     ]
   }
 }

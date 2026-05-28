@@ -1,14 +1,14 @@
 param(
-    [int]$VersionCode = 10,
-    [string]$VersionName = "1.0.9",
+    [int]$VersionCode = 11,
+    [string]$VersionName = "1.1.0",
     [string]$AuthBaseUrl = "https://ai-translate-auth.jiezhi858.workers.dev",
     [string]$Bucket = "ai-translate-assets",
     [string]$PublicBaseUrl = "https://download.204152.xyz",
-    [string]$ApkObjectKey = "releases/ai-translate-1.0.9-debug.apk",
+    [string]$ApkObjectKey = "releases/ai-translate-1.1.0-debug.apk",
     [string[]]$Notes = @(
-        "重新设计应用图标与悬浮球视觉，整体入口更清爽。",
-        "修复拍照或图片翻译返回后误触发旧剪贴板内容翻译的问题。",
-        "悬浮球新增截图框选翻译入口，授权后可框选屏幕区域并自动 OCR 翻译。"
+        "重画应用图标与悬浮球，修复小尺寸下模糊、拥挤的问题。",
+        "修复悬浮球截图翻译在 Android 新版本上无法截屏的问题。",
+        "截图失败提示改为中文，并加强一次性截屏资源释放。"
     )
 )
 

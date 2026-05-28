@@ -14,6 +14,7 @@ import android.graphics.PixelFormat
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.hardware.display.DisplayManager
+import android.hardware.display.VirtualDisplay
 import android.media.ImageReader
 import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
@@ -117,7 +118,7 @@ class FloatingTranslateService : Service() {
             background = floatingBubbleBackground()
             elevation = dp(10).toFloat()
             isClickable = true
-            setPadding(dp(8), dp(8), dp(8), dp(8))
+            setPadding(dp(5), dp(5), dp(5), dp(5))
             setOnLongClickListener {
                 stopSelf()
                 true
@@ -128,7 +129,7 @@ class FloatingTranslateService : Service() {
                 setImageResource(R.drawable.ic_floating_translate_mark)
                 scaleType = ImageView.ScaleType.FIT_CENTER
             },
-            FrameLayout.LayoutParams(dp(40), dp(40), Gravity.CENTER),
+            FrameLayout.LayoutParams(dp(48), dp(48), Gravity.CENTER),
         )
 
         val params = WindowManager.LayoutParams(
@@ -319,7 +320,7 @@ class FloatingTranslateService : Service() {
             showMessagePanel(
                 title = "截图翻译",
                 body = "截图失败",
-                detail = error.message ?: "请重新授权后再试。",
+                detail = screenshotFailureDetail(error),
             )
         }
     }
@@ -372,28 +373,80 @@ class FloatingTranslateService : Service() {
         densityDpi: Int,
     ): Bitmap = withTimeout(4_000L) {
         suspendCancellableCoroutine { continuation ->
+            val mainHandler = Handler(Looper.getMainLooper())
             val imageReader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 2)
-            var resumed = false
-            val virtualDisplay = projection.createVirtualDisplay(
-                "ai-translate-screen-capture",
-                width,
-                height,
-                densityDpi,
-                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
-                imageReader.surface,
-                null,
-                null,
-            ) ?: run {
+            var completed = false
+            var callbackRegistered = false
+            var virtualDisplay: VirtualDisplay? = null
+            lateinit var projectionCallback: MediaProjection.Callback
+
+            fun cleanup() {
+                runCatching { virtualDisplay?.release() }
+                virtualDisplay = null
+                runCatching { imageReader.setOnImageAvailableListener(null, null) }
+                runCatching { imageReader.close() }
+                if (callbackRegistered) {
+                    runCatching { projection.unregisterCallback(projectionCallback) }
+                    callbackRegistered = false
+                }
+            }
+
+            fun completeWithBitmap(bitmap: Bitmap) {
+                if (completed) {
+                    bitmap.recycle()
+                    return
+                }
+                completed = true
+                cleanup()
+                continuation.resume(bitmap)
+            }
+
+            fun completeWithError(error: Throwable) {
+                if (completed) return
+                completed = true
+                cleanup()
+                continuation.resumeWithException(error)
+            }
+
+            projectionCallback = object : MediaProjection.Callback() {
+                override fun onStop() {
+                    completeWithError(IllegalStateException("屏幕捕获已被系统停止，请重新授权后再试。"))
+                }
+            }
+
+            runCatching {
+                projection.registerCallback(projectionCallback, mainHandler)
+            }.onSuccess {
+                callbackRegistered = true
+            }.onFailure { error ->
                 imageReader.close()
-                continuation.resumeWithException(IllegalStateException("无法创建屏幕捕获会话"))
+                continuation.resumeWithException(error)
                 return@suspendCancellableCoroutine
             }
-            fun cleanup() {
-                runCatching { virtualDisplay.release() }
-                runCatching { imageReader.close() }
+
+            virtualDisplay = runCatching {
+                projection.createVirtualDisplay(
+                    "ai-translate-screen-capture",
+                    width,
+                    height,
+                    densityDpi,
+                    DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
+                    imageReader.surface,
+                    null,
+                    null,
+                )
+            }.getOrElse { error ->
+                completeWithError(error)
+                return@suspendCancellableCoroutine
             }
+
+            if (virtualDisplay == null) {
+                completeWithError(IllegalStateException("无法创建屏幕捕获会话"))
+                return@suspendCancellableCoroutine
+            }
+
             imageReader.setOnImageAvailableListener({ reader ->
-                if (resumed) return@setOnImageAvailableListener
+                if (completed) return@setOnImageAvailableListener
                 val image = reader.acquireLatestImage() ?: return@setOnImageAvailableListener
                 runCatching {
                     val plane = image.planes.first()
@@ -408,21 +461,31 @@ class FloatingTranslateService : Service() {
                         paddedBitmap.recycle()
                     }
                 }.onSuccess { bitmap ->
-                    resumed = true
                     image.close()
-                    cleanup()
-                    continuation.resume(bitmap)
+                    completeWithBitmap(bitmap)
                 }.onFailure { error ->
-                    resumed = true
                     image.close()
-                    cleanup()
-                    continuation.resumeWithException(error)
+                    completeWithError(error)
                 }
-            }, Handler(Looper.getMainLooper()))
+            }, mainHandler)
             continuation.invokeOnCancellation {
-                resumed = true
+                completed = true
                 cleanup()
             }
+        }
+    }
+
+    private fun screenshotFailureDetail(error: Throwable): String {
+        val message = error.message.orEmpty()
+        return when {
+            message.contains("register a callback", ignoreCase = true) ->
+                "系统截图会话启动顺序异常，请重新点击截图翻译并授权。"
+            message.contains("Timed out", ignoreCase = true) ->
+                "系统没有及时返回截图画面，请重新框选或再授权一次。"
+            message.contains("VirtualDisplay", ignoreCase = true) ->
+                "系统无法创建截图画面，请重新授权后再试。"
+            message.any { it.code > 127 } -> message
+            else -> "截图没有启动成功，请重新点击截图翻译并授权后再试。"
         }
     }
 
