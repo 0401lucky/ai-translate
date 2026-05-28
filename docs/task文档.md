@@ -2198,4 +2198,4 @@
   - `https://download.204152.xyz/releases/latest.json` 返回 200，内容为 `1.0.9 (10)`。
   - `https://download.204152.xyz/releases/ai-translate-1.0.9-debug.apk` HEAD 返回 200，`Content-Length = 257519984`，`Content-Type = application/vnd.android.package-archive`。
 - `git diff --check`：通过，仅有 Windows 换行提示。
-- GitHub 推送记录待提交完成后补充。
+- 已提交并推送 GitHub `main`：`e0604e5 Release 1.0.9 screenshot translate update`。

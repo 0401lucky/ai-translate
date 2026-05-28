@@ -669,5 +669,5 @@
 - [x] 运行单元测试与 Debug 构建。
 - [x] 上传 1.0.9 Debug APK 到 R2 内置更新。
 - [x] 验证 R2 APK 与 `latest.json` 公开可访问。
-- [ ] 提交并推送 GitHub。
+- [x] 提交并推送 GitHub：`e0604e5`。
 - [x] 回写构建与 R2 验证结果到 Task 文档和 TODO 日志。
