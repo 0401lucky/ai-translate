@@ -39,6 +39,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -106,6 +107,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -3461,8 +3463,17 @@ private enum class SettingsSubPage(val displayName: String) {
     FLOATING_WINDOW("系统悬浮窗"),
     NETWORK_PERFORMANCE("网络与性能"),
     DATA_HISTORY("数据与历史"),
-    ABOUT_UPDATE("关于与系统更新")
+    ABOUT_UPDATE("关于与系统更新"),
+    DEVELOPER_LICENSE("开发许可协议"),
+    PRIVACY_SECURITY("安全与隐私保护")
 }
+
+private val SettingsSubPage.navigationDepth: Int
+    get() = when (this) {
+        SettingsSubPage.DEVELOPER_LICENSE,
+        SettingsSubPage.PRIVACY_SECURITY -> 2
+        else -> 1
+    }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -3492,11 +3503,32 @@ private fun SettingsScreen(
     onTestTts: () -> Unit,
 ) {
     var activeSubPage by remember { mutableStateOf<SettingsSubPage?>(null) }
+    var parentSubPage by remember { mutableStateOf<SettingsSubPage?>(null) }
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     var overlayPermissionGranted by remember { mutableStateOf(Settings.canDrawOverlays(context)) }
     val isCloudConfigured = state.settings.baseUrl.isNotBlank() && state.settings.apiKey.isNotBlank()
     val selectedProvider = state.settings.selectedProvider
+
+    fun openRootSubPage(subPage: SettingsSubPage) {
+        parentSubPage = null
+        activeSubPage = subPage
+    }
+
+    fun openChildSubPage(subPage: SettingsSubPage) {
+        parentSubPage = activeSubPage
+        activeSubPage = subPage
+    }
+
+    fun closeSubPage() {
+        val parent = parentSubPage
+        if (parent != null) {
+            parentSubPage = null
+            activeSubPage = parent
+        } else {
+            activeSubPage = null
+        }
+    }
 
     DisposableEffect(lifecycleOwner, context) {
         val observer = LifecycleEventObserver { _, event ->
@@ -3511,7 +3543,9 @@ private fun SettingsScreen(
     AnimatedContent(
         targetState = activeSubPage,
         transitionSpec = {
-            if (initialState == null && targetState != null) {
+            val initialDepth = initialState?.navigationDepth ?: 0
+            val targetDepth = targetState?.navigationDepth ?: 0
+            if (targetDepth > initialDepth) {
                 // 进入二级子页面：新页面从右侧划入，旧主页向左淡出（视差）
                 (slideInHorizontally(animationSpec = tween(300)) { width -> width } + fadeIn(animationSpec = tween(300)))
                     .togetherWith(slideOutHorizontally(animationSpec = tween(300)) { width -> -width / 3 } + fadeOut(animationSpec = tween(300)))
@@ -3527,12 +3561,13 @@ private fun SettingsScreen(
         if (subPage != null) {
             // 拦截系统返回键，使其返回设置主菜单
             androidx.activity.compose.BackHandler {
-                activeSubPage = null
+                closeSubPage()
             }
             
             SettingsSubPageLayout(
                 subPage = subPage,
-                onBack = { activeSubPage = null },
+                onBack = { closeSubPage() },
+                onNavigate = { openChildSubPage(it) },
                 state = state,
                 onBaseUrlChanged = onBaseUrlChanged,
                 onApiKeyChanged = onApiKeyChanged,
@@ -3564,7 +3599,7 @@ private fun SettingsScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(MaterialTheme.colorScheme.background),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp),
+                contentPadding = PaddingValues(start = 16.dp, top = 14.dp, end = 16.dp, bottom = 150.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 item {
@@ -3596,7 +3631,7 @@ private fun SettingsScreen(
                                     modifier = Modifier.size(22.dp),
                                 )
                             },
-                            onClick = { activeSubPage = SettingsSubPage.MODEL_SERVICE }
+                            onClick = { openRootSubPage(SettingsSubPage.MODEL_SERVICE) }
                         )
                         HorizontalDivider(
                             modifier = Modifier.padding(horizontal = 16.dp),
@@ -3612,7 +3647,7 @@ private fun SettingsScreen(
                                 "HY-MT 走 R2，ML Kit 按需下载"
                             },
                             icon = { Icon(Icons.Default.Storage, contentDescription = null, tint = Color(0xFF5966E8)) },
-                            onClick = { activeSubPage = SettingsSubPage.OFFLINE_MODEL }
+                            onClick = { openRootSubPage(SettingsSubPage.OFFLINE_MODEL) }
                         )
                         HorizontalDivider(
                             modifier = Modifier.padding(horizontal = 16.dp),
@@ -3622,7 +3657,7 @@ private fun SettingsScreen(
                             title = "启动默认模型",
                             subtitle = state.selectedUnifiedModel?.displayName ?: "选择默认加载项",
                             icon = { Icon(Icons.Default.Translate, contentDescription = null, tint = Color(0xFF159FBE)) },
-                            onClick = { activeSubPage = SettingsSubPage.LAUNCH_MODEL }
+                            onClick = { openRootSubPage(SettingsSubPage.LAUNCH_MODEL) }
                         )
                     }
                 }
@@ -3634,7 +3669,7 @@ private fun SettingsScreen(
                             title = "文本朗读 (TTS)",
                             subtitle = ttsStatusText(ttsState),
                             icon = { Icon(Icons.AutoMirrored.Filled.VolumeUp, contentDescription = null, tint = Color(0xFF4CAF50)) },
-                            onClick = { activeSubPage = SettingsSubPage.TTS }
+                            onClick = { openRootSubPage(SettingsSubPage.TTS) }
                         )
                         HorizontalDivider(
                             modifier = Modifier.padding(horizontal = 16.dp),
@@ -3644,7 +3679,7 @@ private fun SettingsScreen(
                             title = "系统悬浮窗",
                             subtitle = if (overlayPermissionGranted) "悬浮球已授权" else "开启复制快捷翻译",
                             icon = { Icon(Icons.Default.Translate, contentDescription = null, tint = Color(0xFFFF9800)) },
-                            onClick = { activeSubPage = SettingsSubPage.FLOATING_WINDOW }
+                            onClick = { openRootSubPage(SettingsSubPage.FLOATING_WINDOW) }
                         )
                         HorizontalDivider(
                             modifier = Modifier.padding(horizontal = 16.dp),
@@ -3654,7 +3689,7 @@ private fun SettingsScreen(
                             title = "网络与性能",
                             subtitle = "配置超时与流式输出等",
                             icon = { Icon(Icons.Default.Settings, contentDescription = null, tint = Color(0xFF9C27B0)) },
-                            onClick = { activeSubPage = SettingsSubPage.NETWORK_PERFORMANCE }
+                            onClick = { openRootSubPage(SettingsSubPage.NETWORK_PERFORMANCE) }
                         )
                     }
                 }
@@ -3666,7 +3701,7 @@ private fun SettingsScreen(
                             title = "账号与同步",
                             subtitle = state.authSession?.let { "已登录：${it.user.username}" } ?: "游客模式，本机使用",
                             icon = { Icon(Icons.Default.Person, contentDescription = null, tint = Color(0xFF5966E8)) },
-                            onClick = { activeSubPage = SettingsSubPage.ACCOUNT }
+                            onClick = { openRootSubPage(SettingsSubPage.ACCOUNT) }
                         )
                         HorizontalDivider(
                             modifier = Modifier.padding(horizontal = 16.dp),
@@ -3676,7 +3711,7 @@ private fun SettingsScreen(
                             title = "数据与历史",
                             subtitle = "管理本地历史与存储",
                             icon = { Icon(Icons.Default.History, contentDescription = null, tint = Color(0xFF607D8B)) },
-                            onClick = { activeSubPage = SettingsSubPage.DATA_HISTORY }
+                            onClick = { openRootSubPage(SettingsSubPage.DATA_HISTORY) }
                         )
                         HorizontalDivider(
                             modifier = Modifier.padding(horizontal = 16.dp),
@@ -3686,7 +3721,7 @@ private fun SettingsScreen(
                             title = "关于与系统更新",
                             subtitle = "版本 ${BuildConfig.VERSION_NAME}",
                             icon = { Icon(Icons.Default.Info, contentDescription = null, tint = Color(0xFFE91E63)) },
-                            onClick = { activeSubPage = SettingsSubPage.ABOUT_UPDATE }
+                            onClick = { openRootSubPage(SettingsSubPage.ABOUT_UPDATE) }
                         )
                     }
                 }
@@ -3943,6 +3978,7 @@ private fun SettingsNavigationRow(
 private fun SettingsSubPageLayout(
     subPage: SettingsSubPage,
     onBack: () -> Unit,
+    onNavigate: (SettingsSubPage) -> Unit,
     state: TranslateUiState,
     onBaseUrlChanged: (String) -> Unit,
     onApiKeyChanged: (String) -> Unit,
@@ -3973,6 +4009,7 @@ private fun SettingsSubPageLayout(
     val modelCount = state.availableModels.size + state.settings.customModelNames.size
     val isCloudConfigured = state.settings.baseUrl.isNotBlank() && state.settings.apiKey.isNotBlank()
     var showProviderSheet by remember { mutableStateOf(false) }
+    val providerSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val localContext = LocalContext.current
 
     Column(
@@ -4013,7 +4050,8 @@ private fun SettingsSubPageLayout(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 16.dp, vertical = 16.dp),
+                .padding(horizontal = 16.dp),
+            contentPadding = PaddingValues(top = 16.dp, bottom = 150.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             when (subPage) {
@@ -4657,9 +4695,119 @@ private fun SettingsSubPageLayout(
                                     }
                                 }
                                 DashedDivider(modifier = Modifier.padding(vertical = 4.dp))
-                                SettingsStaticRow("开发许可协议", "Hy-MT License Agreement")
-                                SettingsStaticRow("安全与隐私保护", "全部数据均安全存储在设备本地")
+                                SettingsActionRow(
+                                    title = "开发许可协议",
+                                    body = "第三方许可、模型授权与使用边界",
+                                    icon = { Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                                    onClick = { onNavigate(SettingsSubPage.DEVELOPER_LICENSE) },
+                                )
+                                SettingsActionRow(
+                                    title = "安全与隐私保护",
+                                    body = "本地存储、账号同步与权限说明",
+                                    icon = { Icon(Icons.Default.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                                    onClick = { onNavigate(SettingsSubPage.PRIVACY_SECURITY) },
+                                )
                             }
+                        }
+                    }
+                }
+                SettingsSubPage.DEVELOPER_LICENSE -> {
+                    item {
+                        SettingsCategoryCard(title = "许可主体") {
+                            SettingsInfoRow(
+                                title = "课程项目使用",
+                                body = "本应用用于 AI 翻译 App 课程设计、学习展示和功能测试。未经项目作者许可，不得将本应用整体转售或移除项目说明后再次发布。",
+                                icon = { Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                            )
+                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                            SettingsInfoRow(
+                                title = "用户配置接口",
+                                body = "用户自行填写的 OpenAI 兼容 Base URL、模型名称和 API Key，应遵守对应服务商的开发者协议、计费规则和内容安全要求。",
+                                icon = { Icon(Icons.Default.Cloud, contentDescription = null, tint = Color(0xFF159FBE)) },
+                            )
+                        }
+                    }
+                    item {
+                        SettingsCategoryCard(title = "第三方组件与模型") {
+                            SettingsInfoRow(
+                                title = "Hy-MT 离线模型",
+                                body = "HY-MT1.5-1.8B-Q4_K_M 通过 Cloudflare R2 分片下载，模型权利归原发布方所有，使用时应保留并遵守原模型许可与限制。",
+                                icon = { Icon(Icons.Default.Storage, contentDescription = null, tint = Color(0xFF5966E8)) },
+                            )
+                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                            SettingsInfoRow(
+                                title = "Google ML Kit",
+                                body = "设备端离线翻译、语种模型和 OCR 能力由 Google ML Kit SDK 提供，模型下载和缓存遵循 Google SDK 的许可与服务条款。",
+                                icon = { Icon(Icons.Default.Translate, contentDescription = null, tint = Color(0xFF4CAF50)) },
+                            )
+                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                            SettingsInfoRow(
+                                title = "开源依赖",
+                                body = "AndroidX Compose、Room、DataStore、OkHttp、Kotlin 协程和 Cloudflare Workers 相关工具均按其各自开源许可使用。",
+                                icon = { Icon(Icons.Default.Settings, contentDescription = null, tint = Color(0xFF607D8B)) },
+                            )
+                        }
+                    }
+                    item {
+                        SettingsCategoryCard(title = "使用边界") {
+                            SettingsInfoRow(
+                                title = "禁止行为",
+                                body = "不得逆向破解、绕过服务商限制、批量滥用接口、传播违法内容，或将课程演示版本伪装为正式商业服务。",
+                                icon = { Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+                            )
+                        }
+                    }
+                }
+                SettingsSubPage.PRIVACY_SECURITY -> {
+                    item {
+                        SettingsCategoryCard(title = "数据存储") {
+                            SettingsInfoRow(
+                                title = "本地优先",
+                                body = "翻译设置、供应商配置、API Key 和本地历史主要保存在设备应用私有目录中，普通应用无法直接访问。",
+                                icon = { Icon(Icons.Default.Storage, contentDescription = null, tint = Color(0xFF5966E8)) },
+                            )
+                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                            SettingsInfoRow(
+                                title = "账号同步",
+                                body = "登录后，账号信息和需要同步的翻译历史会发送到 Cloudflare Workers 后端，并写入 D1 数据库。密码只保存 PBKDF2 哈希，不保存明文。",
+                                icon = { Icon(Icons.Default.Person, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                            )
+                        }
+                    }
+                    item {
+                        SettingsCategoryCard(title = "网络与权限") {
+                            SettingsInfoRow(
+                                title = "云端翻译请求",
+                                body = "选择云端翻译时，原文会直接发送到用户配置的模型服务商；游客模式不会把翻译内容上传到本项目后端。",
+                                icon = { Icon(Icons.Default.Cloud, contentDescription = null, tint = Color(0xFF159FBE)) },
+                            )
+                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                            SettingsInfoRow(
+                                title = "悬浮窗和截图",
+                                body = "悬浮球需要系统悬浮窗权限；截图翻译只在用户主动授权屏幕捕获后执行，完成识别后释放截屏资源。",
+                                icon = { Icon(Icons.Default.Translate, contentDescription = null, tint = Color(0xFFFF9800)) },
+                            )
+                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                            SettingsInfoRow(
+                                title = "更新包校验",
+                                body = "应用更新从 Cloudflare R2 下载，安装前会校验文件大小和 SHA256，校验失败不会拉起系统安装器。",
+                                icon = { Icon(Icons.Default.Download, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                            )
+                        }
+                    }
+                    item {
+                        SettingsCategoryCard(title = "用户控制") {
+                            SettingsInfoRow(
+                                title = "可清理数据",
+                                body = "你可以在“数据与历史”中清空本地翻译历史；卸载应用会由系统清除应用私有目录中的本地数据。",
+                                icon = { Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+                            )
+                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                            SettingsInfoRow(
+                                title = "最小化收集",
+                                body = "应用不会后台监听剪贴板，也不会自动分析用户行为；网络请求只在翻译、登录、同步、模型下载或检查更新等明确操作时发起。",
+                                icon = { Icon(Icons.Default.Lock, contentDescription = null, tint = Color(0xFF4CAF50)) },
+                            )
                         }
                     }
                 }
@@ -4668,7 +4816,10 @@ private fun SettingsSubPageLayout(
     }
 
     if (showProviderSheet) {
-        ModalBottomSheet(onDismissRequest = { showProviderSheet = false }) {
+        ModalBottomSheet(
+            onDismissRequest = { showProviderSheet = false },
+            sheetState = providerSheetState,
+        ) {
             ProviderConfigSheet(
                 state = state,
                 onProviderNameChanged = onProviderNameChanged,
@@ -5234,6 +5385,46 @@ private fun SettingsActionRow(
 }
 
 @Composable
+private fun SettingsInfoRow(
+    title: String,
+    body: String,
+    icon: @Composable () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 18.dp, vertical = 13.dp),
+        verticalAlignment = Alignment.Top,
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Surface(
+            modifier = Modifier.size(38.dp),
+            shape = RoundedCornerShape(12.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.48f),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)),
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                icon()
+            }
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = body,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                lineHeight = 18.sp,
+            )
+        }
+    }
+}
+
+@Composable
 private fun SettingsStaticRow(
     title: String,
     value: String,
@@ -5270,67 +5461,81 @@ private fun ProviderConfigSheet(
     onSelectCloudProvider: (String) -> Unit,
     onAddCloudProvider: () -> Unit,
 ) {
+    val scrollState = rememberScrollState()
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .imePadding()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+            .fillMaxHeight(0.9f)
+            .imePadding(),
     ) {
-        Text(
-            text = "供应商配置",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-        )
-        Text(
-            text = "选择一个供应商后配置接口。API Key 仅保存在本机 DataStore。",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        ProviderCardList(
-            providers = state.settings.cloudProviders,
-            selectedProviderId = state.settings.selectedProviderId,
-            onSelectProvider = onSelectCloudProvider,
-        )
-        OutlinedButton(
-            onClick = onAddCloudProvider,
-            shape = RoundedCornerShape(16.dp),
-            modifier = Modifier.fillMaxWidth(),
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(scrollState)
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Icon(Icons.Default.Add, contentDescription = null)
-            Spacer(Modifier.width(6.dp))
-            Text("添加供应商")
+            Text(
+                text = "供应商配置",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                text = "选择一个供应商后配置接口。API Key 仅保存在本机 DataStore。",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            ProviderCardList(
+                providers = state.settings.cloudProviders,
+                selectedProviderId = state.settings.selectedProviderId,
+                onSelectProvider = onSelectCloudProvider,
+            )
+            OutlinedButton(
+                onClick = onAddCloudProvider,
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(Icons.Default.Add, contentDescription = null)
+                Spacer(Modifier.width(6.dp))
+                Text("添加供应商")
+            }
+            OutlinedTextField(
+                value = state.settings.selectedProvider.name,
+                onValueChange = onProviderNameChanged,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("供应商名称") },
+                singleLine = true,
+                leadingIcon = {
+                    ProviderIconBadge(
+                        name = state.settings.selectedProvider.name,
+                        baseUrl = state.settings.selectedProvider.baseUrl,
+                        modifier = Modifier.size(28.dp),
+                    )
+                },
+            )
+            OutlinedTextField(
+                value = state.settings.baseUrl,
+                onValueChange = onBaseUrlChanged,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Base URL") },
+                singleLine = true,
+            )
+            OutlinedTextField(
+                value = state.settings.apiKey,
+                onValueChange = onApiKeyChanged,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("API Key") },
+                singleLine = true,
+                visualTransformation = PasswordVisualTransformation(),
+            )
+            Text(
+                text = "如果键盘遮住输入框，可在弹窗内部上下滑动继续编辑。",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+            )
+            Spacer(Modifier.height(28.dp))
         }
-        OutlinedTextField(
-            value = state.settings.selectedProvider.name,
-            onValueChange = onProviderNameChanged,
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text("供应商名称") },
-            singleLine = true,
-            leadingIcon = {
-                ProviderIconBadge(
-                    name = state.settings.selectedProvider.name,
-                    baseUrl = state.settings.selectedProvider.baseUrl,
-                    modifier = Modifier.size(28.dp),
-                )
-            },
-        )
-        OutlinedTextField(
-            value = state.settings.baseUrl,
-            onValueChange = onBaseUrlChanged,
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text("Base URL") },
-            singleLine = true,
-        )
-        OutlinedTextField(
-            value = state.settings.apiKey,
-            onValueChange = onApiKeyChanged,
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text("API Key") },
-            singleLine = true,
-            visualTransformation = PasswordVisualTransformation(),
-        )
-        Spacer(Modifier.height(12.dp))
     }
 }
 

@@ -1,14 +1,14 @@
 param(
-    [int]$VersionCode = 12,
-    [string]$VersionName = "1.1.1",
+    [int]$VersionCode = 13,
+    [string]$VersionName = "1.1.2",
     [string]$AuthBaseUrl = "https://ai-translate-auth.jiezhi858.workers.dev",
     [string]$Bucket = "ai-translate-assets",
     [string]$PublicBaseUrl = "https://download.204152.xyz",
-    [string]$ApkObjectKey = "releases/ai-translate-1.1.1-debug.apk",
+    [string]$ApkObjectKey = "releases/ai-translate-1.1.2-debug.apk",
     [string[]]$Notes = @(
-        "实装 Premium 桌面图标，使用高清前景资源提升启动器显示质感。",
-        "实装 3D 水晶悬浮球，去除旧线框背景，悬浮层更轻盈清晰。",
-        "优化图标资源处理脚本，便于后续继续生成和维护图标资产。"
+        "补全开发许可协议和安全与隐私保护推入式详情页。",
+        "修复供应商配置弹窗在模拟器和小屏下的内部滚动与键盘避让。",
+        "优化设置页层级导航和底部滚动留白。"
     )
 )
 

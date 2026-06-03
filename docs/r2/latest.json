@@ -1,17 +1,17 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-05-28T11:55:22+08:00",
+  "updatedAt": "2026-06-03T20:50:32+08:00",
   "android": {
-    "versionCode": 12,
-    "versionName": "1.1.1",
+    "versionCode": 13,
+    "versionName": "1.1.2",
     "required": false,
-    "apkUrl": "https://download.204152.xyz/releases/ai-translate-1.1.1-debug.apk",
-    "sha256": "CEB0789F91FD4DC057925CEDA4184C73E794294E221C19F3C995E66FF6D31010",
-    "sizeBytes": 258311796,
+    "apkUrl": "https://download.204152.xyz/releases/ai-translate-1.1.2-debug.apk",
+    "sha256": "335520E669996FE195C15D3C16A8861E0994ACD18169E7464568A90C34C5C019",
+    "sizeBytes": 258328180,
     "notes": [
-      "实装 Premium 桌面图标，使用高清前景资源提升启动器显示质感。",
-      "实装 3D 水晶悬浮球，去除旧线框背景，悬浮层更轻盈清晰。",
-      "优化图标资源处理脚本，便于后续继续生成和维护图标资产。"
+      "补全开发许可协议和安全与隐私保护推入式详情页。",
+      "修复供应商配置弹窗在模拟器和小屏下的内部滚动与键盘避让。",
+      "优化设置页层级导航和底部滚动留白。"
     ]
   }
 }

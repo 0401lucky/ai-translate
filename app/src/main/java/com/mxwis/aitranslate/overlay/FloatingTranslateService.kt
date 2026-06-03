@@ -32,6 +32,7 @@ import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import com.mxwis.aitranslate.AiTranslateApplication
@@ -500,9 +501,9 @@ class FloatingTranslateService : Service() {
         }
 
         removePanel()
-        val sourceText = bodyText("正在读取剪贴板...", BODY_TEXT, maxLines = 4)
+        val sourceText = scrollableBodyText("正在读取剪贴板...", BODY_TEXT)
         val statusText = bodyText("等待翻译", SUB_TEXT, maxLines = 2)
-        val resultText = bodyText("译文会显示在这里", SUB_TEXT, maxLines = 8)
+        val resultText = scrollableBodyText("译文会显示在这里", SUB_TEXT)
         val sourceSpeakButton = actionButton("朗读原文").apply { isEnabled = false }
         val resultSpeakButton = actionButton("朗读译文").apply { isEnabled = false }
         val copyButton = actionButton("复制译文").apply {
@@ -525,11 +526,11 @@ class FloatingTranslateService : Service() {
 
         panel.addView(header)
         panel.addView(sectionLabel("原文"))
-        panel.addView(card(sourceText))
+        panel.addView(scrollableCard(sourceText, maxHeightDp = 112))
         panel.addView(sectionLabel("状态"))
         panel.addView(statusText)
         panel.addView(sectionLabel("译文"))
-        panel.addView(card(resultText))
+        panel.addView(scrollableCard(resultText, maxHeightDp = 200))
 
         val actions = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -577,9 +578,9 @@ class FloatingTranslateService : Service() {
             scaleType = ImageView.ScaleType.CENTER_CROP
             background = roundedBackground(Color.rgb(248, 250, 252), dp(8))
         }
-        val sourceText = bodyText("正在识别截图文字...", BODY_TEXT, maxLines = 6)
+        val sourceText = scrollableBodyText("正在识别截图文字...", BODY_TEXT)
         val statusText = bodyText("正在识别", SUB_TEXT, maxLines = 2)
-        val resultText = bodyText("译文会显示在这里", SUB_TEXT, maxLines = 8)
+        val resultText = scrollableBodyText("译文会显示在这里", SUB_TEXT)
         val copyButton = actionButton("复制译文").apply { isEnabled = false }
         val speakButton = actionButton("朗读译文").apply { isEnabled = false }
         val reselectButton = actionButton("重新框选")
@@ -601,11 +602,11 @@ class FloatingTranslateService : Service() {
         panel.addView(sectionLabel("截图预览"))
         panel.addView(preview, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(112)))
         panel.addView(sectionLabel("识别文字"))
-        panel.addView(card(sourceText))
+        panel.addView(scrollableCard(sourceText, maxHeightDp = 132))
         panel.addView(sectionLabel("状态"))
         panel.addView(statusText)
         panel.addView(sectionLabel("译文"))
-        panel.addView(card(resultText))
+        panel.addView(scrollableCard(resultText, maxHeightDp = 192))
 
         val actions = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -846,6 +847,33 @@ class FloatingTranslateService : Service() {
         }
     }
 
+    private fun scrollableCard(content: TextView, maxHeightDp: Int): LinearLayout {
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(12), dp(10), dp(8), dp(10))
+            background = roundedBackground(Color.rgb(248, 250, 252), dp(8))
+            addView(
+                ScrollView(this@FloatingTranslateService).apply {
+                    isFillViewport = false
+                    isVerticalScrollBarEnabled = true
+                    scrollBarStyle = View.SCROLLBARS_INSIDE_INSET
+                    overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
+                    addView(
+                        content,
+                        FrameLayout.LayoutParams(
+                            FrameLayout.LayoutParams.MATCH_PARENT,
+                            FrameLayout.LayoutParams.WRAP_CONTENT,
+                        ),
+                    )
+                },
+                LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    dp(maxHeightDp),
+                ),
+            )
+        }
+    }
+
     private fun titleText(text: String): TextView {
         return TextView(this).apply {
             this.text = text
@@ -863,6 +891,12 @@ class FloatingTranslateService : Service() {
             this.maxLines = maxLines
             ellipsize = android.text.TextUtils.TruncateAt.END
             setLineSpacing(dp(2).toFloat(), 1f)
+        }
+    }
+
+    private fun scrollableBodyText(text: String, color: Int): TextView {
+        return bodyText(text, color, maxLines = Int.MAX_VALUE).apply {
+            ellipsize = null
         }
     }
 

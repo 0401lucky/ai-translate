@@ -737,3 +737,112 @@
 - [x] 验证 R2 APK 与 `latest.json` 公开可访问。
 - [x] 提交并推送 GitHub。
 - [x] 回写构建与 R2 验证结果到 Task 文档和 TODO 日志。
+
+## 2026-05-28：修复悬浮面板长文本不可内部滚动
+
+- [x] 明确完成标准：识别文字 / 原文和译文卡片内部可滚动，底部操作按钮固定可见，构建通过。
+- [x] 更新 `docs/task文档.md`，新增 Task 060。
+- [x] 使用 imagegen 生成内部滚动版悬浮面板设计参考图：`docs/ui/floating-panel-scrollable-text-design.png`。
+- [ ] 为截图翻译面板增加内部滚动文本卡片。
+- [ ] 为剪贴板悬浮面板增加内部滚动文本卡片。
+- [ ] 运行编译和测试验证。
+- [ ] 回写验证结果到 Task 文档和 TODO 日志。
+
+## 2026-05-30：按当前项目润色与扩充课程设计论文
+
+- [x] 对照真实代码完成调研（翻译核心 / 模型 / 更新 / 悬浮窗截图翻译 / 后端 Worker / 持久化 / 测试 / 构建）。
+- [x] 确认论文由 `scripts/build_course_paper.py` 生成，确定"改脚本再重跑"方案（自动备份、图文一致、低风险）。
+- [x] 与用户确认四项目标、交付方式、篇幅与三项细节决策（补截图翻译并配图、参数表+少量关键代码、参考文献规范 GB/T 7714）。
+- [x] 更新 `docs/task文档.md`，新增 Task 061。
+- [x] 改脚本：纠错（架构图 AuthViewModel、接口表 R2 路径与 /history 字段、ER 图云端表名）。
+- [x] 改脚本：新增"截图翻译活动图"与 5.6 / 5.7 小节。
+- [x] 改脚本：补参数表与少量关键代码片段。
+- [x] 改脚本：扩充第二 / 三 / 六章与权限、测试覆盖表。
+- [x] 改脚本：参考文献扩充并规范为 GB/T 7714。
+- [x] 运行 `py scripts/build_course_paper.py` 重新生成 docx。
+- [x] 抽取新 docx 校验结构、图表编号与关键技术数值。
+- [x] 回写验证结果到 Task 文档和 TODO 日志。
+
+## 2026-05-30：课程设计论文最终润色与真机截图补强
+
+- [x] 明确完成标准：补成员信息、真机截图、测试章、项目特色说明，重新生成并更新 Word 目录，最终文档可直接提交。
+- [x] 更新 `docs/task文档.md`，新增 Task 062。
+- [x] 确认已连接手机并获取真实 App 截图。
+- [x] 修改 `scripts/build_course_paper.py`：封面成员信息、截图插入、测试章扩写、系统特色与离线词典表述修正。
+- [x] 重新生成正式 Word 文档并保留备份。
+- [x] 使用 Microsoft Word 自动更新目录域。
+- [x] 抽取 docx 验证目录、图片、表格、章节和关键词。
+- [x] 回写验证结果到 Task 文档和 TODO 日志。
+
+### 验证记录
+
+- ADB 真机截图已保存至 `docs/paper_screenshots/`。
+- `py` AST 语法检查通过。
+- 干跑生成成功：`app程序设计-唐国荣_FINAL_DRYRUN_20260530_232310.docx`。
+- 正式生成成功：`D:\code\app开发\app程序设计-唐国荣.docx`。
+- 自动备份：`app程序设计-唐国荣_补全前备份_20260530_232348.docx`。
+- Word 目录自动更新成功：目录对象 1 个，域 87 个。
+- 抽取校验通过：37 页、表格 18、图片 19、`PAGEREF = 43`、错误域 0。
+
+## 2026-06-03：单独生成课程系统设计文档
+
+- [x] 明确完成标准：目标 Word 按模板完成系统设计内容，生成前备份，结构检查通过，并尽力完成渲染或视觉验证。
+- [x] 更新 `docs/task文档.md`，新增 Task 063。
+- [x] 从正式课程论文第四章提取系统设计内容和图表来源。
+- [x] 生成 `课程论文_《APP开发课程设计》系统设计论文.docx`。
+- [x] 校验目标文档章节、表格、图片和关键文本。
+- [x] 尝试渲染或替代视觉检查。
+- [x] 回写验证结果到 Task 文档和 TODO 日志。
+
+### 验证记录
+
+- 目标文档已生成到 `D:\code\app开发\学习资料\课程论文_《APP开发课程设计》系统设计论文.docx`。
+- 原始模板备份：`课程论文_《APP开发课程设计》系统设计论文_备份_20260603_182102.docx`。
+- 抽取校验通过：段落 59、表格 6、正文内嵌图片 10。
+- 封面信息校验通过：题目、3 名团队成员、专业班级和二级学院已填写。
+- 章节校验通过：业务流程设计、接口设计、类设计、数据库设计、系统架构设计均存在。
+- Word PDF 预览曾成功导出 13 页并检查封面与正文图表页；后续 Word COM 导出偶发卡住，已停止残留后台进程。
+
+## 2026-06-03：完善关于与系统更新详情页和供应商配置滚动
+
+- [x] 明确完成标准：开发许可协议 / 安全与隐私保护使用推入式详情页展示，供应商配置弹窗可内部滚动，Debug 构建和模拟器验证通过。
+- [x] 更新 `docs/task文档.md`，新增 Task 064。
+- [x] 使用 imagegen 生成设置详情页设计图并保存到 `docs/ui/about-license-privacy-settings-list-design.png`。
+- [x] 实现“开发许可协议”详情页。
+- [x] 实现“安全与隐私保护”详情页。
+- [x] 修复供应商配置底部弹窗高度、滚动和键盘避让。
+- [x] 运行 Debug 构建并在模拟器中截图验证。
+- [x] 回写验证结果到 Task 文档和 TODO 日志。
+
+### 验证记录
+
+- Debug 构建通过：`.\gradlew.bat :app:assembleDebug --no-daemon --console=plain -PemulatorX86Only=true`。
+- 模拟器安装成功，并验证“关于与系统更新”存在“开发许可协议 / 安全与隐私保护”两个推入式入口。
+- 已打开“开发许可协议”和“安全与隐私保护”详情页，内容按设置列表分组展示并可返回。
+- 已验证“供应商配置”底部弹窗直接全展开，内部可滚动到 `Base URL` 和 `API Key`，输入框聚焦后仍在弹窗可视区域内。
+- 验证截图已保存：
+  - `docs/ui/prototype-screenshots/about-update-license-privacy-entry.png`
+  - `docs/ui/prototype-screenshots/developer-license-detail.png`
+  - `docs/ui/prototype-screenshots/privacy-security-detail.png`
+  - `docs/ui/prototype-screenshots/provider-config-sheet-scroll-fields.png`
+
+## 2026-06-03：发布 1.1.2 设置详情与供应商配置修复版本
+
+- [x] 明确完成标准：版本提升为 `1.1.2 (13)`，Debug APK 构建成功，R2 内置更新清单指向新版，公开 URL 可访问，并推送 GitHub；本次不安装到模拟器。
+- [x] 更新 `docs/task文档.md`，新增 Task 065。
+- [x] 将 App 默认版本号提升为 `1.1.2 (13)`。
+- [x] 更新 R2 Debug 发版脚本默认参数和更新说明。
+- [x] 构建 `1.1.2` Debug APK。
+- [ ] 上传 `1.1.2` Debug APK 到 R2：当前 Cloudflare OAuth 对目标 bucket 返回 `403 Authentication error`，需重新登录拥有 `ai-translate-assets` 权限的账号后重跑发布脚本。
+- [ ] 验证 R2 APK 与 `latest.json` 公开可访问：等待 R2 上传完成。
+- [ ] 提交并推送 GitHub。
+- [x] 回写构建结果与 R2 权限阻塞情况到 Task 文档和 TODO 日志。
+
+### 验证记录
+
+- `.\scripts\publish-r2-debug-update.ps1` 中的 Gradle Debug 构建通过。
+- 本地 APK：`app/build/outputs/apk/debug/app-debug.apk`，大小 `258328180` 字节。
+- 本地 APK SHA256：`335520E669996FE195C15D3C16A8861E0994ACD18169E7464568A90C34C5C019`。
+- 本地 `docs/r2/latest.json` 已指向 `1.1.2 (13)`。
+- R2 上传失败点为 Cloudflare 账号权限，不是 APK 构建失败。
+- 公网 `latest.json` 当前仍为 `1.1.1 (12)`，`1.1.2` APK 地址返回 `404`。
