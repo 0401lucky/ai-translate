@@ -2693,12 +2693,12 @@
 
 ### 验证记录
 
-- 已确认 Wrangler `4.90.0` 可用，当前 OAuth 登录有效，但目标 R2 bucket `ai-translate-assets` 不在当前可写账号下。
-- 已执行 `.\scripts\publish-r2-debug-update.ps1`，Gradle Debug 构建成功。
+- 已确认 Wrangler `4.90.0` 可用，当前 OAuth 登录账号为 `jiezhi858@gmail.com`，可访问 R2 bucket `ai-translate-assets`。
+- 已重新执行 `.\scripts\publish-r2-debug-update.ps1`，Gradle Debug 构建成功，APK 和 `releases/latest.json` 上传 R2 成功。
 - 本地 APK：`app/build/outputs/apk/debug/app-debug.apk`，大小 `258328180` 字节。
 - 本地 APK SHA256：`335520E669996FE195C15D3C16A8861E0994ACD18169E7464568A90C34C5C019`。
 - 已生成本地 R2 更新清单：`docs/r2/latest.json`，内容指向 `1.1.2 (13)` 和 `https://download.204152.xyz/releases/ai-translate-1.1.2-debug.apk`。
-- R2 上传未完成：`wrangler r2 object put` 访问 `ai-translate-assets` 返回 `403 Authentication error`。需要重新登录拥有该 bucket 权限的 Cloudflare 账号后重跑发布脚本。
-- 公网校验结果：`https://download.204152.xyz/releases/latest.json` 当前仍为 `1.1.1 (12)`，`1.1.2` APK 地址返回 `404`，内置更新尚未切到新版。
+- 公网校验通过：`https://download.204152.xyz/releases/latest.json` 已返回 `versionCode = 13`、`versionName = 1.1.2`。
+- APK 公网校验通过：`https://download.204152.xyz/releases/ai-translate-1.1.2-debug.apk` 返回 `HTTP 200`，`Content-Length = 258328180`，`Content-Type = application/vnd.android.package-archive`。
 - GitHub 推送完成：`main` 已推送到 `origin/main`，提交 `9f3f251`。
 - 按用户要求，本次未安装 APK 到模拟器。
