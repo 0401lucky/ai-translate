@@ -835,7 +835,7 @@
 - [x] 构建 `1.1.2` Debug APK。
 - [ ] 上传 `1.1.2` Debug APK 到 R2：当前 Cloudflare OAuth 对目标 bucket 返回 `403 Authentication error`，需重新登录拥有 `ai-translate-assets` 权限的账号后重跑发布脚本。
 - [ ] 验证 R2 APK 与 `latest.json` 公开可访问：等待 R2 上传完成。
-- [ ] 提交并推送 GitHub。
+- [x] 提交并推送 GitHub。
 - [x] 回写构建结果与 R2 权限阻塞情况到 Task 文档和 TODO 日志。
 
 ### 验证记录
@@ -846,3 +846,4 @@
 - 本地 `docs/r2/latest.json` 已指向 `1.1.2 (13)`。
 - R2 上传失败点为 Cloudflare 账号权限，不是 APK 构建失败。
 - 公网 `latest.json` 当前仍为 `1.1.1 (12)`，`1.1.2` APK 地址返回 `404`。
+- GitHub 推送完成：`main` 已推送到 `origin/main`，提交 `9f3f251`。

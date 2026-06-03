@@ -2700,4 +2700,5 @@
 - 已生成本地 R2 更新清单：`docs/r2/latest.json`，内容指向 `1.1.2 (13)` 和 `https://download.204152.xyz/releases/ai-translate-1.1.2-debug.apk`。
 - R2 上传未完成：`wrangler r2 object put` 访问 `ai-translate-assets` 返回 `403 Authentication error`。需要重新登录拥有该 bucket 权限的 Cloudflare 账号后重跑发布脚本。
 - 公网校验结果：`https://download.204152.xyz/releases/latest.json` 当前仍为 `1.1.1 (12)`，`1.1.2` APK 地址返回 `404`，内置更新尚未切到新版。
+- GitHub 推送完成：`main` 已推送到 `origin/main`，提交 `9f3f251`。
 - 按用户要求，本次未安装 APK 到模拟器。
