@@ -1,17 +1,17 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-06-03T22:41:04+08:00",
+  "updatedAt": "2026-06-05T18:03:29+08:00",
   "android": {
-    "versionCode": 13,
-    "versionName": "1.1.2",
+    "versionCode": 14,
+    "versionName": "1.1.3",
     "required": false,
-    "apkUrl": "https://download.204152.xyz/releases/ai-translate-1.1.2-debug.apk",
-    "sha256": "335520E669996FE195C15D3C16A8861E0994ACD18169E7464568A90C34C5C019",
+    "apkUrl": "https://download.204152.xyz/releases/ai-translate-1.1.3-debug.apk",
+    "sha256": "4274B2BF6000C85B01E961A3D7F835055CE3E51CB8AF58A906596C9E9FFE7662",
     "sizeBytes": 258328180,
     "notes": [
-      "补全开发许可协议和安全与隐私保护推入式详情页。",
-      "修复供应商配置弹窗在模拟器和小屏下的内部滚动与键盘避让。",
-      "优化设置页层级导航和底部滚动留白。"
+      "修复设置页滚动到底后底部出现大面积空白的问题。",
+      "收敛设置主页和二级设置页列表尾部间距。",
+      "保留底部导航栏上方的自然安全留白。"
     ]
   }
 }

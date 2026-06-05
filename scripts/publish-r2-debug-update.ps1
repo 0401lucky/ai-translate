@@ -1,14 +1,14 @@
 param(
-    [int]$VersionCode = 13,
-    [string]$VersionName = "1.1.2",
+    [int]$VersionCode = 14,
+    [string]$VersionName = "1.1.3",
     [string]$AuthBaseUrl = "https://ai-translate-auth.jiezhi858.workers.dev",
     [string]$Bucket = "ai-translate-assets",
     [string]$PublicBaseUrl = "https://download.204152.xyz",
-    [string]$ApkObjectKey = "releases/ai-translate-1.1.2-debug.apk",
+    [string]$ApkObjectKey = "releases/ai-translate-1.1.3-debug.apk",
     [string[]]$Notes = @(
-        "补全开发许可协议和安全与隐私保护推入式详情页。",
-        "修复供应商配置弹窗在模拟器和小屏下的内部滚动与键盘避让。",
-        "优化设置页层级导航和底部滚动留白。"
+        "修复设置页滚动到底后底部出现大面积空白的问题。",
+        "收敛设置主页和二级设置页列表尾部间距。",
+        "保留底部导航栏上方的自然安全留白。"
     )
 )
 
